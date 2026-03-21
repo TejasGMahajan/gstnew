@@ -8,10 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Users, TrendingUp, Download, Upload, Send, CreditCard as Edit, Clock, CircleAlert as AlertCircle } from 'lucide-react';
+import { Users, TrendingUp, Download, Upload, Send, CreditCard as Edit, Clock, CircleAlert as AlertCircle, UserPlus, Copy, CheckCheck, Mail, FileDown, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
@@ -20,6 +22,7 @@ import EmptyState from '@/components/shared/EmptyState';
 import WorkflowStepIndicator, { getStatusLabel, getNextAllowedStatus } from '@/components/shared/WorkflowStepIndicator';
 import { logError, withErrorLogging } from '@/lib/errorLogger';
 import { transitionTaskStatus, updateTaskOptimistic, uploadDocumentSecure, getSignedDocumentUrl, logUserAction } from '@/lib/api';
+import { UpgradePrompt } from '@/lib/featureGate';
 import { getTaskActions } from '@/lib/authGuard';
 import { sanitizeFileName } from '@/lib/sanitize';
 
@@ -29,6 +32,14 @@ interface ClientBusiness {
   business_type: string;
   compliance_score: number;
   pending_docs: number;
+  plan_type: string;
+}
+
+interface PendingClient {
+  relId: string;
+  business_id: string;
+  business_name: string;
+  business_type: string;
 }
 
 interface ComplianceTask {
@@ -62,6 +73,9 @@ export default function CADashboard() {
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [pendingClients, setPendingClients] = useState<PendingClient[]>([]);
+  const [showReportUpgrade, setShowReportUpgrade] = useState(false);
 
   // Bulk selection state
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
@@ -82,6 +96,11 @@ export default function CADashboard() {
     }
   }, [user, profile]);
 
+  /**
+   * Loads the CA dashboard by compiling an aggregate representation 
+   * of all linked client businesses, verifying their compliance levels, 
+   * and calculating their respective pending tasks.
+   */
   const loadCADashboard = async () => {
     try {
       const { data: relationships } = await supabase
@@ -100,7 +119,7 @@ export default function CADashboard() {
 
       if (relationships) {
         const clientsList = await Promise.all(
-          relationships.map(async (rel: any) => {
+          relationships.map(async (rel: { business_id: string; businesses: any }) => {
             const { data: pendingTasks } = await supabase
               .from('compliance_tasks')
               .select('id')
@@ -113,10 +132,61 @@ export default function CADashboard() {
               business_type: rel.businesses.business_type || 'N/A',
               compliance_score: rel.businesses.compliance_score || 0,
               pending_docs: pendingTasks?.length || 0,
+              plan_type: 'free',
             };
           })
         );
+
+        // Fetch subscriptions for all clients and attach plan_type
+        const businessIds = clientsList.map((c) => c.id);
+        if (businessIds.length > 0) {
+          const { data: subs } = await supabase
+            .from('subscriptions')
+            .select('business_id, plan_type')
+            .in('business_id', businessIds)
+            .eq('status', 'active');
+
+          if (subs) {
+            const planMap = new Map(subs.map((s: any) => [s.business_id, s.plan_type as string]));
+            for (const c of clientsList) {
+              c.plan_type = planMap.get(c.id) ?? 'free';
+            }
+          }
+        }
+
+        // Sort: pro/enterprise first, then free
+        clientsList.sort((a, b) => {
+          const isPaidA = ['pro', 'enterprise'].includes(a.plan_type) ? 0 : 1;
+          const isPaidB = ['pro', 'enterprise'].includes(b.plan_type) ? 0 : 1;
+          return isPaidA - isPaidB;
+        });
+
         setClients(clientsList);
+      }
+
+      // Load pending invites (status='pending') so CA can see who hasn't accepted yet
+      const { data: pendingRels } = await supabase
+        .from('client_relationships')
+        .select(`
+          id,
+          business_id,
+          businesses (
+            business_name,
+            business_type
+          )
+        `)
+        .eq('ca_profile_id', user!.id)
+        .eq('status', 'pending');
+
+      if (pendingRels) {
+        setPendingClients(
+          pendingRels.map((r: any) => ({
+            relId:         r.id,
+            business_id:   r.business_id,
+            business_name: r.businesses?.business_name ?? 'Unknown',
+            business_type: r.businesses?.business_type ?? 'N/A',
+          })),
+        );
       }
     } catch (error) {
       console.error('Error loading CA dashboard:', error);
@@ -161,9 +231,10 @@ export default function CADashboard() {
         title: 'Request Sent',
         description: 'Document request notification sent to client!',
       });
-    } catch (error: any) {
-      await logError('request_document', error, { taskId: selectedTask.id });
-      toast({ title: 'Error', description: error.message || 'Failed to send request.', variant: 'destructive' });
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      await logError('request_document', err, { taskId: selectedTask.id });
+      toast({ title: 'Error', description: err.message || 'Failed to send request.', variant: 'destructive' });
     } finally {
       setActionLoading(null);
     }
@@ -189,14 +260,15 @@ export default function CADashboard() {
       }
 
       toast({ title: 'Saved', description: 'Task values updated successfully!' });
-    } catch (error: any) {
-      if (error instanceof SyntaxError) {
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      if (err instanceof SyntaxError) {
         toast({ title: 'Invalid JSON', description: 'Please check your JSON format.', variant: 'destructive' });
       } else if (error.message?.startsWith('CONFLICT:')) {
         toast({ title: 'Conflict', description: 'Someone else modified this task. Please reload and try again.', variant: 'destructive' });
       } else {
-        await logError('save_task_edit', error, { taskId: selectedTask.id });
-        toast({ title: 'Error', description: error.message || 'Failed to save changes.', variant: 'destructive' });
+        await logError('save_task_edit', err, { taskId: selectedTask.id });
+        toast({ title: 'Error', description: err.message || 'Failed to save changes.', variant: 'destructive' });
       }
     } finally {
       setActionLoading(null);
@@ -277,9 +349,10 @@ export default function CADashboard() {
       toast({ title: 'Completed!', description: 'Acknowledgement uploaded and task acknowledged.' });
       setDrawerOpen(false);
       loadCADashboard();
-    } catch (error: any) {
-      await logError('upload_acknowledgement', error, { taskId: selectedTask.id });
-      toast({ title: 'Upload Failed', description: error.message || 'Could not upload the file.', variant: 'destructive' });
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      await logError('upload_acknowledgement', err, { taskId: selectedTask.id });
+      toast({ title: 'Upload Failed', description: err.message || 'Could not upload the file.', variant: 'destructive' });
     } finally {
       setActionLoading(null);
     }
@@ -339,8 +412,57 @@ export default function CADashboard() {
     try {
       const signedUrl = await getSignedDocumentUrl(doc.id);
       window.open(signedUrl, '_blank');
-    } catch (error: any) {
-      toast({ title: 'Access Denied', description: error.message || 'Cannot view document.', variant: 'destructive' });
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      toast({ title: 'Access Denied', description: err.message || 'Cannot view document.', variant: 'destructive' });
+    }
+  };
+
+  const handleExportReport = async () => {
+    if (!selectedTask) return;
+    setActionLoading('export_report');
+    setShowReportUpgrade(false);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ title: 'Not authenticated', variant: 'destructive' });
+        return;
+      }
+
+      const res = await fetch(`/api/export/${selectedTask.business_id}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (res.status === 403) {
+        const body = await res.json().catch(() => ({}));
+        if (body.error === 'upgrade_required') {
+          setShowReportUpgrade(true);
+          return;
+        }
+        toast({ title: 'Access denied', variant: 'destructive' });
+        return;
+      }
+
+      if (!res.ok) throw new Error(`Export failed (${res.status})`);
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      // Use filename from Content-Disposition if available
+      const cd = res.headers.get('Content-Disposition') ?? '';
+      const match = cd.match(/filename="([^"]+)"/);
+      a.download = match ? match[1] : 'compliance_report.pdf';
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({ title: 'Report Downloaded', description: 'PDF compliance report saved.' });
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      toast({ title: 'Export Failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -437,88 +559,164 @@ export default function CADashboard() {
 
         <Card className="shadow-lg border-slate-200">
           <CardHeader className="bg-gradient-to-r from-blue-900 to-blue-800 text-white rounded-t-lg">
-            <CardTitle className="text-xl">Client Roster</CardTitle>
-            <CardDescription className="text-blue-100">
-              Manage compliance for all your MSME clients
-            </CardDescription>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-xl">Client Roster</CardTitle>
+                <CardDescription className="text-blue-100">
+                  {clients.length} active · {pendingClients.length} pending
+                </CardDescription>
+              </div>
+              <Button
+                onClick={() => setInviteOpen(true)}
+                className="bg-white text-blue-900 hover:bg-blue-50 shrink-0"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Client
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10">
-                      <Checkbox
-                        checked={clients.length > 0 && selectedClientIds.size === clients.length}
-                        onCheckedChange={toggleSelectAll}
-                      />
-                    </TableHead>
-                    <TableHead>Business Name</TableHead>
-                    <TableHead className="hidden sm:table-cell">Entity Type</TableHead>
-                    <TableHead>Compliance Score</TableHead>
-                    <TableHead className="hidden md:table-cell">Pending</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {clients.map((client) => (
-                    <TableRow key={client.id}>
-                      <TableCell>
+            {/* Summary line */}
+            {clients.length > 0 && (
+              <p className="text-sm text-slate-500 mb-4">
+                <span className="font-medium text-green-700">
+                  {clients.filter((c) => ['pro', 'enterprise'].includes(c.plan_type)).length} priority clients
+                </span>
+                {' | '}
+                <span className="font-medium text-slate-600">
+                  {clients.filter((c) => !['pro', 'enterprise'].includes(c.plan_type)).length} standard clients
+                </span>
+              </p>
+            )}
+
+            <div className="space-y-3">
+              {/* Priority Clients */}
+              {clients.some((c) => ['pro', 'enterprise'].includes(c.plan_type)) && (
+                <>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-green-700 mb-1">Priority Clients</p>
+                  {clients
+                    .filter((c) => ['pro', 'enterprise'].includes(c.plan_type))
+                    .map((client) => (
+                      <div
+                        key={client.id}
+                        className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 border-l-[3px] border-l-green-500 bg-white hover:bg-slate-50 transition-colors"
+                      >
                         <Checkbox
                           checked={selectedClientIds.has(client.id)}
                           onCheckedChange={() => toggleClientSelection(client.id)}
                         />
-                      </TableCell>
-                      <TableCell className="font-medium">{client.business_name}</TableCell>
-                      <TableCell className="hidden sm:table-cell">{client.business_type}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-full max-w-[100px] bg-slate-200 rounded-full h-2">
-                            <div
-                              className={`h-2 rounded-full ${
-                                client.compliance_score >= 80
-                                  ? 'bg-green-600'
-                                  : client.compliance_score >= 60
-                                  ? 'bg-yellow-600'
-                                  : 'bg-red-600'
-                              }`}
-                              style={{ width: `${client.compliance_score}%` }}
-                            ></div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-slate-900 truncate">{client.business_name}</span>
+                            <Badge className="bg-green-100 text-green-800 border-green-200 text-xs shrink-0">
+                              {client.plan_type.charAt(0).toUpperCase() + client.plan_type.slice(1)}
+                            </Badge>
+                            {client.pending_docs > 0 ? (
+                              <Badge variant="destructive" className="text-xs shrink-0">{client.pending_docs} Pending</Badge>
+                            ) : (
+                              <Badge className="bg-green-600 text-xs shrink-0">All Clear</Badge>
+                            )}
                           </div>
-                          <span className="text-sm font-semibold">{client.compliance_score}%</span>
+                          <p className="text-xs text-slate-500 mt-0.5">{client.business_type}</p>
                         </div>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {client.pending_docs > 0 ? (
-                          <Badge variant="destructive">{client.pending_docs} Pending</Badge>
-                        ) : (
-                          <Badge className="bg-green-600">All Clear</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          onClick={() => setSelectedClient(client)}
-                          className="bg-blue-900 hover:bg-blue-800"
-                        >
-                          View Tasks
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {clients.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                        <EmptyState
-                          icon={Users}
-                          title="No clients yet"
-                          description="Start building your portfolio by inviting clients!"
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-sm font-semibold text-slate-700 mr-2">{client.compliance_score}%</span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-8"
+                            title="Send WhatsApp notification"
+                            onClick={() => {/* WhatsApp handled via task workflow */}}
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => setSelectedClient(client)}
+                            className="bg-blue-900 hover:bg-blue-800 text-xs h-8"
+                          >
+                            View Tasks
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                </>
+              )}
+
+              {/* Standard Clients */}
+              {clients.some((c) => !['pro', 'enterprise'].includes(c.plan_type)) && (
+                <>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mt-4 mb-1">Standard Clients</p>
+                  {clients
+                    .filter((c) => !['pro', 'enterprise'].includes(c.plan_type))
+                    .map((client) => (
+                      <div
+                        key={client.id}
+                        className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
+                      >
+                        <Checkbox
+                          checked={selectedClientIds.has(client.id)}
+                          onCheckedChange={() => toggleClientSelection(client.id)}
                         />
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-slate-900 truncate">{client.business_name}</span>
+                            <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs shrink-0">Free Plan</Badge>
+                            {client.pending_docs > 0 ? (
+                              <Badge variant="destructive" className="text-xs shrink-0">{client.pending_docs} Pending</Badge>
+                            ) : (
+                              <Badge className="bg-green-600 text-xs shrink-0">All Clear</Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500 mt-0.5">{client.business_type}</p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-sm font-semibold text-slate-700 mr-2">{client.compliance_score}%</span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-8 opacity-50 cursor-not-allowed"
+                            disabled
+                            title="Client needs Pro plan for automated reminders"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => setSelectedClient(client)}
+                            className="bg-blue-900 hover:bg-blue-800 text-xs h-8"
+                          >
+                            View Tasks
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                </>
+              )}
+
+              {/* Pending invite rows */}
+              {pendingClients.map((pc) => (
+                <div key={pc.relId} className="flex items-center gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50/40">
+                  <div className="w-4 h-4 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-slate-700 truncate">{pc.business_name}</span>
+                      <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs shrink-0">Pending</Badge>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">{pc.business_type}</p>
+                  </div>
+                </div>
+              ))}
+
+              {clients.length === 0 && pendingClients.length === 0 && (
+                <div className="text-center py-8 text-slate-500">
+                  <EmptyState
+                    icon={Users}
+                    title="No clients yet"
+                    description="Start building your portfolio by inviting clients!"
+                  />
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -553,6 +751,24 @@ export default function CADashboard() {
 
               <div className="mt-4 mb-6">
                 <WorkflowStepIndicator currentStatus={selectedTask.status} />
+              </div>
+
+              {/* Export Report */}
+              <div className="mb-4">
+                <Button
+                  onClick={handleExportReport}
+                  variant="outline"
+                  className="w-full border-indigo-300 text-indigo-700 hover:bg-indigo-50 gap-2"
+                  disabled={actionLoading === 'export_report'}
+                >
+                  <FileDown className="h-4 w-4" />
+                  {actionLoading === 'export_report' ? 'Generating PDF…' : 'Export Compliance Report (PDF)'}
+                </Button>
+                {showReportUpgrade && (
+                  <div className="mt-3">
+                    <UpgradePrompt feature="export_report" />
+                  </div>
+                )}
               </div>
 
               <div className="mt-6 space-y-6">
@@ -687,9 +903,253 @@ export default function CADashboard() {
           )}
         </SheetContent>
       </Sheet>
+
+      <InviteClientModal
+        caProfileId={user!.id}
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        onSuccess={() => { setInviteOpen(false); loadCADashboard(); }}
+      />
     </div>
   );
 }
+
+// ─── InviteClientModal ────────────────────────────────────────────────────────
+
+type InviteStep = 'form' | 'success' | 'link';
+
+function InviteClientModal({
+  caProfileId,
+  open,
+  onClose,
+  onSuccess,
+}: {
+  caProfileId: string;
+  open: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const { toast } = useToast();
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<InviteStep>('form');
+  const [invitedBizName, setInvitedBizName] = useState('');
+  const [signupLink, setSignupLink] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  const reset = () => {
+    setEmail('');
+    setStep('form');
+    setInvitedBizName('');
+    setSignupLink('');
+    setCopied(false);
+    setLoading(false);
+  };
+
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(signupLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleInvite = async () => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return;
+    setLoading(true);
+
+    try {
+      // 1. Check if a business_owner with this email already exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', trimmed)
+        .eq('user_type', 'business_owner')
+        .maybeSingle();
+
+      if (!existingProfile) {
+        // No account yet — give the CA a copyable signup link
+        const link = `${window.location.origin}/signup?ca=${caProfileId}&role=business_owner`;
+        setSignupLink(link);
+        setStep('link');
+        setLoading(false);
+        return;
+      }
+
+      // 2. Get their business
+      const { data: business } = await supabase
+        .from('businesses')
+        .select('id, business_name')
+        .eq('owner_id', existingProfile.id)
+        .maybeSingle();
+
+      if (!business) {
+        // Profile exists but no business created yet — send signup link so they finish onboarding
+        const link = `${window.location.origin}/signup?ca=${caProfileId}&role=business_owner`;
+        setSignupLink(link);
+        setStep('link');
+        setLoading(false);
+        return;
+      }
+
+      // 3. Create the client_relationships row (pending until the owner accepts)
+      const { error: relError } = await supabase
+        .from('client_relationships')
+        .insert({
+          ca_profile_id: caProfileId,
+          business_id:   business.id,
+          status:        'pending',
+        });
+
+      if (relError) {
+        // Likely a duplicate — handle gracefully
+        if (relError.code === '23505') {
+          toast({
+            title:       'Already linked',
+            description: `A relationship with ${business.business_name} already exists.`,
+            variant:     'destructive',
+          });
+        } else {
+          throw relError;
+        }
+      } else {
+        setInvitedBizName(business.business_name);
+        setStep('success');
+        onSuccess();
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Something went wrong';
+      toast({ title: 'Error', description: msg, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
+      <DialogContent className="max-w-md">
+
+        {step === 'form' && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <UserPlus className="h-5 w-5 text-blue-900" />
+                Invite a Client
+              </DialogTitle>
+              <DialogDescription>
+                Enter the client's email address. If they already have an account,
+                a connection request will be sent. Otherwise you'll get a shareable
+                signup link.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="py-2 space-y-3">
+              <div>
+                <label className="text-sm font-medium text-slate-700 mb-1 block">
+                  Client's Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    type="email"
+                    placeholder="client@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !loading && handleInvite()}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={handleClose}>Cancel</Button>
+              <Button
+                onClick={handleInvite}
+                disabled={loading || !email.trim()}
+                className="bg-blue-900 hover:bg-blue-800"
+              >
+                {loading ? 'Checking…' : 'Send Invite'}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {step === 'success' && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-green-700">
+                <CheckCheck className="h-5 w-5" />
+                Invite Sent
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-slate-700 py-2">
+              A connection request has been sent to{' '}
+              <strong>{invitedBizName}</strong>. It will appear in your client
+              roster once they accept.
+            </p>
+            <DialogFooter>
+              <Button onClick={handleClose} className="bg-blue-900 hover:bg-blue-800">
+                Done
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {step === 'link' && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Copy className="h-5 w-5 text-blue-900" />
+                Share Signup Link
+              </DialogTitle>
+              <DialogDescription>
+                This email isn't registered yet. Share the link below on WhatsApp
+                — when they sign up, you'll be connected automatically.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="py-2 space-y-3">
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                <p className="text-xs font-mono text-slate-700 break-all flex-1">
+                  {signupLink}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={handleCopy}
+              >
+                {copied ? (
+                  <>
+                    <CheckCheck className="h-4 w-4 text-green-600" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    Copy Link
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={handleClose}>Close</Button>
+            </DialogFooter>
+          </>
+        )}
+
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── ClientTasksList ──────────────────────────────────────────────────────────
 
 function ClientTasksList({
   clientId,

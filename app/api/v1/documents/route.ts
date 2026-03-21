@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logError } from '@/lib/errorLogger';
 
 /**
  * Public API — GET /api/v1/documents
@@ -62,7 +62,9 @@ export async function GET(request: Request) {
         total_pages: Math.ceil((count || 0) / pageSize),
       },
     });
-  } catch (err: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    await logError('api_v1_documents_get', errorMessage, { originalError: error }, null, null);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

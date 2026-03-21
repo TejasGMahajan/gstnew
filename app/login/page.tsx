@@ -34,8 +34,8 @@ export default function LoginPage() {
 
       toast({ title: 'Welcome back!', description: 'Login successful.' });
       router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during login');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : typeof err === 'string' ? err : 'An error occurred during login');
     } finally {
       setLoading(false);
     }

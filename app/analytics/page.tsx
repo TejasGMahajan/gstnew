@@ -14,6 +14,14 @@ import PageHeader from '@/components/shared/PageHeader';
 import EmptyState from '@/components/shared/EmptyState';
 import LegalDisclaimer from '@/components/shared/LegalDisclaimer';
 
+interface Alert {
+  id: string;
+  title: string;
+  description: string;
+  suggested_action?: string;
+  severity: string;
+}
+
 interface AnalyticsData {
   totalTasks: number;
   completedTasks: number;
@@ -22,7 +30,7 @@ interface AnalyticsData {
   tasksByType: { type: string; count: number }[];
   tasksByStatus: { status: string; count: number }[];
   monthlyTrend: { month: string; completed: number; total: number }[];
-  alerts: any[];
+  alerts: Alert[];
 }
 
 export default function AnalyticsDashboard() {
@@ -115,8 +123,8 @@ export default function AnalyticsDashboard() {
         monthlyTrend,
         alerts: alerts || [],
       });
-    } catch (err) {
-      console.error('Analytics error:', err);
+    } catch (err: unknown) {
+      console.error('Analytics error:', err instanceof Error ? err.message : String(err));
       toast({ title: 'Error', description: 'Failed to load analytics', variant: 'destructive' });
     } finally {
       setLoading(false);
@@ -269,7 +277,7 @@ export default function AnalyticsDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-3">
-              {data.alerts.map((alert: any) => (
+              {data.alerts.map((alert: Alert) => (
                 <div key={alert.id} className="p-3 bg-red-50 rounded-lg border border-red-100">
                   <div className="flex items-start justify-between">
                     <div>

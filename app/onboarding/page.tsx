@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +11,57 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2, CircleAlert as AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+
+function buildComplianceTasks(businessId: string) {
+  const today = new Date();
+  const tasks: Array<{ business_id: string; task_name: string; due_date: string; status: string }> = [];
+
+  // Monthly tasks — next 12 months starting from the current month
+  const monthly = [
+    { task_name: 'GSTR-1 Filing',  day: 11 },
+    { task_name: 'GSTR-3B Filing', day: 20 },
+    { task_name: 'PF/ESI Payment', day: 15 },
+    { task_name: 'TDS Payment',    day: 7  },
+  ];
+
+  for (let i = 0; i < 12; i++) {
+    const totalMonth = today.getMonth() + i;
+    const year  = today.getFullYear() + Math.floor(totalMonth / 12);
+    const month = totalMonth % 12;
+    for (const t of monthly) {
+      tasks.push({
+        business_id: businessId,
+        task_name:   t.task_name,
+        due_date:    new Date(year, month, t.day).toISOString().split('T')[0],
+        status:      'pending',
+      });
+    }
+  }
+
+  // Annual tasks — current Indian financial year (April–March)
+  // If we are in Jan–Mar the FY started last calendar year; otherwise this year
+  const fyStartYear  = today.getMonth() < 3 ? today.getFullYear() - 1 : today.getFullYear();
+  const nextCalYear  = fyStartYear + 1; // filing deadlines fall in the next calendar year
+
+  const annual = [
+    { task_name: 'MSME Form 1 (H1)',          month: 3,  day: 30 }, // Apr 30
+    { task_name: 'Income Tax Return',          month: 6,  day: 31 }, // Jul 31
+    { task_name: 'DIR-3 KYC',                 month: 8,  day: 30 }, // Sep 30
+    { task_name: 'MSME Form 1 (H2)',          month: 9,  day: 31 }, // Oct 31
+    { task_name: 'GST Annual Return (GSTR-9)', month: 11, day: 31 }, // Dec 31
+  ];
+
+  for (const t of annual) {
+    tasks.push({
+      business_id: businessId,
+      task_name:   t.task_name,
+      due_date:    new Date(nextCalYear, t.month, t.day).toISOString().split('T')[0],
+      status:      'pending',
+    });
+  }
+
+  return tasks;
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -23,7 +74,7 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -45,37 +96,18 @@ export default function OnboardingPage() {
       if (insertError) throw insertError;
 
       if (data) {
-        const sampleTasks = [
-          {
-            business_id: data.id,
-            task_name: 'GSTR-1',
-            task_type: 'GST',
-            due_date: new Date(new Date().setDate(11)).toISOString().split('T')[0],
-            status: 'pending',
-            priority: 'high',
-            description: 'Monthly GST return filing for outward supplies',
-          },
-          {
-            business_id: data.id,
-            task_name: 'GSTR-3B',
-            task_type: 'GST',
-            due_date: new Date(new Date().setDate(20)).toISOString().split('T')[0],
-            status: 'pending',
-            priority: 'high',
-            description: 'Summary return and monthly payment of GST',
-          },
-          {
-            business_id: data.id,
-            task_name: 'PF Payment',
-            task_type: 'PF',
-            due_date: new Date(new Date().setDate(15)).toISOString().split('T')[0],
-            status: 'pending',
-            priority: 'medium',
-            description: 'Monthly Employee Provident Fund contribution',
-          },
-        ];
+        await supabase.from('compliance_tasks').insert(buildComplianceTasks(data.id));
 
-        await supabase.from('compliance_tasks').insert(sampleTasks);
+        // Auto-link to a CA if the user arrived via an invite link (?ca=...)
+        const pendingCaId = localStorage.getItem('pending_ca_id');
+        if (pendingCaId) {
+          await supabase.from('client_relationships').insert({
+            ca_profile_id: pendingCaId,
+            business_id:   data.id,
+            status:        'pending',
+          });
+          localStorage.removeItem('pending_ca_id');
+        }
 
         router.push('/dashboard');
       }

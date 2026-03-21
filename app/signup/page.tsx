@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,9 +13,17 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 
 export default function SignUpPage() {
-  const router = useRouter();
-  const { toast } = useToast();
-  const [userType, setUserType] = useState<UserType | null>(null);
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const { toast }    = useToast();
+
+  // ?ca=<caProfileId>&role=business_owner  — from a CA's invite link
+  const caParam   = searchParams.get('ca');
+  const roleParam = searchParams.get('role') as UserType | null;
+
+  const [userType, setUserType] = useState<UserType | null>(
+    roleParam === 'business_owner' || roleParam === 'chartered_accountant' ? roleParam : null,
+  );
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -55,11 +63,17 @@ export default function SignUpPage() {
 
         if (profileError) throw profileError;
 
+        // If they arrived via a CA invite link, persist the CA id so
+        // onboarding can create the client_relationship after business setup.
+        if (caParam) {
+          localStorage.setItem('pending_ca_id', caParam);
+        }
+
         toast({ title: 'Account Created! 🎉', description: 'Welcome to ComplianceHub!' });
         router.push('/dashboard');
       }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during signup');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : typeof err === 'string' ? err : 'An error occurred during signup');
     } finally {
       setLoading(false);
     }

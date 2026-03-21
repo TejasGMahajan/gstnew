@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { User } from '@supabase/supabase-js';
 
 export type UserRole = 'business_owner' | 'chartered_accountant' | 'employee' | 'admin';
 
@@ -9,11 +10,17 @@ export type Permission =
   | 'delete_document'
   | 'view_admin';
 
+interface Profile {
+  user_type?: string;
+  ca_verification_status?: string;
+  [key: string]: unknown;
+}
+
 interface AuthGuardResult {
   allowed: boolean;
   error?: string;
-  user?: any;
-  profile?: any;
+  user?: User;
+  profile?: Profile;
 }
 
 /**

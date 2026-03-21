@@ -35,7 +35,7 @@ export async function transitionTaskStatus(taskId: string, newStatus: string) {
 export async function updateTaskOptimistic(
   taskId: string,
   expectedUpdatedAt: string,
-  updates: { finalValues?: any; description?: string }
+  updates: { finalValues?: Record<string, unknown>; description?: string }
 ) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');

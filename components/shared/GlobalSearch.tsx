@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +20,7 @@ interface GlobalSearchProps {
   activeFilters?: Record<string, string>;
 }
 
-export default function GlobalSearch({
+function GlobalSearch({
   placeholder = 'Search by name, GSTIN, document...',
   onSearch,
   filters = [],
@@ -171,3 +171,5 @@ export default function GlobalSearch({
     </div>
   );
 }
+
+export default memo(GlobalSearch);

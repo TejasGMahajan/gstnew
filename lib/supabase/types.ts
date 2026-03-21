@@ -1,4 +1,4 @@
-export type UserType = 'business_owner' | 'chartered_accountant';
+export type UserType = 'business_owner' | 'chartered_accountant' | 'admin';
 
 export interface Profile {
   id: string;

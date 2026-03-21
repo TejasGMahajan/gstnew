@@ -16,6 +16,8 @@ import EmptyState from '@/components/shared/EmptyState';
 import PageHeader from '@/components/shared/PageHeader';
 import FileUpload from '@/components/shared/FileUpload';
 
+import { Business } from '@/types';
+
 interface Document {
   id: string;
   business_id: string;
@@ -32,21 +34,26 @@ interface AuditLog {
   user_id: string;
   action: string;
   description: string;
-  old_value?: any;
-  new_value?: any;
+  old_value?: Record<string, unknown>;
+  new_value?: Record<string, unknown>;
   created_at: string;
   profiles: {
     full_name: string;
   };
 }
 
-const CATEGORIES = ['GST', 'PF', 'ROC', 'Invoices'];
+const CATEGORIES = ['GST', 'PF-ESI', 'ROC', 'Invoices', 'Other'];
+
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
 
 export default function DocumentVault() {
   const router = useRouter();
   const { user, profile, loading: authLoading, signOut } = useAuth();
   const { toast } = useToast();
-  const [business, setBusiness] = useState<any>(null);
+  const [business, setBusiness] = useState<Business | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
@@ -55,6 +62,9 @@ export default function DocumentVault() {
   const [auditDialogOpen, setAuditDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [uploadCategory, setUploadCategory] = useState('GST');
+  const currentYear = new Date().getFullYear();
+  const [uploadMonth, setUploadMonth] = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
+  const [uploadYear, setUploadYear] = useState(String(currentYear));
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -90,8 +100,8 @@ export default function DocumentVault() {
         .order('uploaded_at', { ascending: false });
 
       setDocuments(docsData || []);
-    } catch (error) {
-      console.error('Error loading vault:', error);
+    } catch (error: unknown) {
+      console.error('Error loading vault:', error instanceof Error ? error.message : String(error));
       toast({ title: 'Error', description: 'Failed to load vault data.', variant: 'destructive' });
     } finally {
       setLoading(false);
@@ -128,7 +138,7 @@ export default function DocumentVault() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast({ title: 'Download Started', description: `Downloading "${doc.file_name}"` });
-    } catch (error) {
+    } catch (error: unknown) {
       toast({ title: 'Download Failed', description: 'Could not download the file.', variant: 'destructive' });
     }
   };
@@ -150,7 +160,19 @@ export default function DocumentVault() {
     setAuditDialogOpen(true);
   };
 
-  const handleUploadComplete = () => {
+  const handleUploadComplete = async (doc: Record<string, unknown>) => {
+    await supabase.from('audit_logs').insert({
+      entity_type: 'document',
+      entity_id:   doc.id as string,
+      action:      'uploaded',
+      user_id:     user!.id,
+      new_value: {
+        file_name: doc.fileName,
+        category:  uploadCategory,
+        month:     uploadMonth,
+        year:      uploadYear,
+      },
+    });
     setUploadDialogOpen(false);
     loadVaultData();
   };
@@ -351,9 +373,39 @@ export default function DocumentVault() {
                       {cat}
                     </SelectItem>
                   ))}
-                  <SelectItem value="General">General</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium text-slate-700 mb-1 block">Month</label>
+                <Select value={uploadMonth} onValueChange={setUploadMonth}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MONTHS.map((name, i) => (
+                      <SelectItem key={name} value={String(i + 1).padStart(2, '0')}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700 mb-1 block">Year</label>
+                <Select value={uploadYear} onValueChange={setUploadYear}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[currentYear - 1, currentYear, currentYear + 1].map((y) => (
+                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             {business && user && (
               <FileUpload

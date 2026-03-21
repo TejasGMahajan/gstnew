@@ -100,8 +100,8 @@ export default function PricingPage() {
   const router = useRouter();
   const { user, profile, loading: authLoading, signOut } = useAuth();
   const { toast } = useToast();
-  const [business, setBusiness] = useState<any>(null);
-  const [subscription, setSubscription] = useState<any>(null);
+  const [business, setBusiness] = useState<Record<string, unknown> | null>(null);
+  const [subscription, setSubscription] = useState<Record<string, unknown> | null>(null);
   const [billingCycle, setBillingCycle] = useState<'annual' | 'quarterly'>('annual');
   const [loading, setLoading] = useState(true);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
@@ -154,6 +154,11 @@ export default function PricingPage() {
     router.push('/login');
   };
 
+  /**
+   * Initiates the Razorpay checkout process for a plan upgrade.
+   * Calls the backend API to create an order, opens the Razorpay modal,
+   * and delegates to verifyPayment on success.
+   */
   const handleUpgrade = async (plan: Plan, cycle: 'annual' | 'quarterly') => {
     if (!business || !razorpayLoaded) {
       toast({ title: 'Please Wait', description: 'Payment system is loading...' });
@@ -203,7 +208,7 @@ export default function PricingPage() {
         theme: {
           color: '#1e3a8a'
         },
-        handler: function (response: any) {
+        handler: function (response: Record<string, unknown>) {
           verifyPayment(response, order.id);
         }
       };
@@ -215,7 +220,7 @@ export default function PricingPage() {
     }
   };
 
-  const verifyPayment = async (response: any, orderId: string) => {
+  const verifyPayment = async (response: Record<string, unknown>, orderId: string) => {
     try {
       const result = await fetch('/api/razorpay/verify-payment', {
         method: 'POST',
@@ -240,6 +245,10 @@ export default function PricingPage() {
     }
   };
 
+  /**
+   * Triggers a micro-transaction flow for buying extra features like
+   * storage or SMS credits without altering the main subscription.
+   */
   const handleTopup = async (topup: typeof TOPUPS[0]) => {
     if (!business || !razorpayLoaded) {
       toast({ title: 'Please Wait', description: 'Payment system is loading...' });
@@ -281,7 +290,7 @@ export default function PricingPage() {
         theme: {
           color: '#1e3a8a'
         },
-        handler: function (response: any) {
+        handler: function (response: Record<string, unknown>) {
           toast({ title: 'Top-up Successful! 🎉', description: 'Your credits have been added.' });
           loadBusinessData();
         }

@@ -36,7 +36,7 @@ interface ErrorLog {
   error_message: string;
   severity: string;
   created_at: string;
-  metadata: any;
+  metadata: Record<string, unknown>;
 }
 
 export default function AdminDashboard() {
