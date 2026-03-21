@@ -11,7 +11,9 @@ export const config = {
   matcher: [
     '/dashboard-owner/:path*',
     '/dashboard-ca/:path*',
+    '/dashboard-admin/:path*',
     '/vault/:path*',
     '/admin/:path*',
+    '/analytics/:path*',
   ],
 };

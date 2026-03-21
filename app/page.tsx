@@ -233,9 +233,8 @@ export default function Home() {
             </Button>
             <Button
               size="lg"
-              variant="outline"
               onClick={() => router.push('/signup')}
-              className="border-slate-500 text-white hover:bg-slate-800 h-13 px-8 text-base font-semibold"
+              className="border-2 border-white text-white hover:bg-white hover:text-blue-900 h-12 px-8 text-base font-semibold bg-transparent"
             >
               I&apos;m a Business
             </Button>

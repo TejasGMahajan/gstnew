@@ -108,16 +108,14 @@ export default function PricingPage() {
   const [paymentLoading, setPaymentLoading] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
+    if (!authLoading) {
+      if (user && profile) {
+        loadBusinessData();
+      } else if (!user) {
+        setLoading(false); // show plans in public/read-only mode
+      }
     }
-  }, [user, authLoading, router]);
-
-  useEffect(() => {
-    if (user && profile) {
-      loadBusinessData();
-    }
-  }, [user, profile]);
+  }, [user, authLoading, profile]);
 
   const loadBusinessData = async () => {
     try {
@@ -328,13 +326,21 @@ export default function PricingPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Button onClick={() => router.push('/dashboard-owner')} variant="outline" className="border-slate-300 hover:bg-slate-100">
-                  Back to Dashboard
-                </Button>
-                <Button variant="outline" onClick={handleSignOut} className="border-slate-300 hover:bg-slate-100">
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </Button>
+                {user ? (
+                  <>
+                    <Button onClick={() => router.push('/dashboard-owner')} variant="outline" className="border-slate-300 hover:bg-slate-100">
+                      Back to Dashboard
+                    </Button>
+                    <Button variant="outline" onClick={handleSignOut} className="border-slate-300 hover:bg-slate-100">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sign Out
+                    </Button>
+                  </>
+                ) : (
+                  <Button onClick={() => router.push('/signup')} className="bg-blue-900 hover:bg-blue-800 text-white">
+                    Get Started Free
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -440,12 +446,19 @@ export default function PricingPage() {
                       ))}
                     </div>
 
-                    {isCurrentPlan ? (
+                    {!user ? (
                       <Button
-                        className="w-full"
-                        variant="outline"
-                        disabled
+                        onClick={() => router.push('/signup')}
+                        className={`w-full font-semibold ${
+                          plan.popular
+                            ? 'bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600'
+                            : 'bg-blue-900 hover:bg-blue-800'
+                        }`}
                       >
+                        {plan.id === 'free' ? 'Get Started Free' : 'Sign Up to Upgrade'}
+                      </Button>
+                    ) : isCurrentPlan ? (
+                      <Button className="w-full" variant="outline" disabled>
                         Current Plan
                       </Button>
                     ) : (

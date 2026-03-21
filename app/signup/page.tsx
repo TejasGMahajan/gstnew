@@ -30,6 +30,7 @@ export default function SignUpPage() {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [signupSuccess, setSignupSuccess] = useState(false);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,8 +70,7 @@ export default function SignUpPage() {
           localStorage.setItem('pending_ca_id', caParam);
         }
 
-        toast({ title: 'Account Created! 🎉', description: 'Welcome to ComplianceHub!' });
-        router.push('/dashboard');
+        setSignupSuccess(true);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : typeof err === 'string' ? err : 'An error occurred during signup');
@@ -78,6 +78,40 @@ export default function SignUpPage() {
       setLoading(false);
     }
   };
+
+  if (signupSuccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+        <Card className="w-full max-w-md shadow-xl border-slate-200 text-center">
+          <CardHeader className="space-y-3 pb-4">
+            <div className="flex justify-center mb-2">
+              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-green-600 to-green-500 flex items-center justify-center">
+                <FileCheck className="h-8 w-8 text-white" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-bold text-slate-900">Account Created!</CardTitle>
+            <CardDescription className="text-base text-slate-600">
+              One last step — confirm your email
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 pb-8">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900 text-left">
+              <p className="font-semibold mb-1">Check your inbox</p>
+              <p>We sent a confirmation link to <strong>{email}</strong>.</p>
+              <p className="mt-2">Click the link in the email to activate your account, then come back to log in.</p>
+              <p className="mt-2 text-blue-700">Can't find it? Check your <strong>spam / junk folder</strong>.</p>
+            </div>
+            <Button
+              className="w-full bg-blue-900 hover:bg-blue-800 text-white"
+              onClick={() => router.push('/login')}
+            >
+              Go to Login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">

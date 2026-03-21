@@ -11,6 +11,10 @@ import { FileCheck, CircleAlert as AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 
+// NOTE FOR DEVELOPER: Go to Supabase Dashboard > Authentication > Settings > Email Auth
+// and DISABLE "Confirm email" for faster testing. Re-enable before production launch.
+// Alternatively add your test email to the "Allow list" in Supabase Auth settings.
+
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -18,11 +22,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setEmailNotConfirmed(false);
 
     try {
       const { error: authError } = await supabase.auth.signInWithPassword({
@@ -30,7 +37,15 @@ export default function LoginPage() {
         password,
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        if (authError.message.toLowerCase().includes('email not confirmed')) {
+          setEmailNotConfirmed(true);
+          setError('Please check your email inbox and confirm your email address before logging in. Check your spam folder too.');
+        } else {
+          setError(authError.message);
+        }
+        return;
+      }
 
       toast({ title: 'Welcome back!', description: 'Login successful.' });
       router.push('/dashboard');
@@ -38,6 +53,19 @@ export default function LoginPage() {
       setError(err instanceof Error ? err.message : typeof err === 'string' ? err : 'An error occurred during login');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    setResendLoading(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      if (error) throw error;
+      toast({ title: 'Email sent!', description: 'Check your inbox (and spam folder) for the confirmation link.' });
+    } catch (err: unknown) {
+      toast({ title: 'Failed to resend', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -65,6 +93,17 @@ export default function LoginPage() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
+            )}
+            {emailNotConfirmed && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full border-blue-300 text-blue-900 hover:bg-blue-50"
+                onClick={handleResendConfirmation}
+                disabled={resendLoading || !email}
+              >
+                {resendLoading ? 'Sending...' : 'Resend confirmation email'}
+              </Button>
             )}
 
             <div className="space-y-4">
