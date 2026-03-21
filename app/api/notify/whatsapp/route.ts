@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { checkFeatureAccess } from '@/lib/featureGate';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
+export const dynamic = 'force-dynamic';
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const GUPSHUP_API_URL = 'https://api.gupshup.io/sm/api/v1/msg';

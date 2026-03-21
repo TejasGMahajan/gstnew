@@ -4,6 +4,8 @@ import { jsPDF } from 'jspdf';
 import { checkFeatureAccess } from '@/lib/featureGate';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
+export const dynamic = 'force-dynamic';
+
 // ─── Auth helper ──────────────────────────────────────────────────────────────
 
 async function authenticateCA(

@@ -1,5 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
+import { NextResponse } from 'next/server';
 import { logError } from '@/lib/errorLogger';
+
+// Prevent Next.js from statically prerendering this API route at build time
+export const dynamic = 'force-dynamic';
 
 /**
  * Public API — GET /api/v1/documents
@@ -64,7 +68,7 @@ export async function GET(request: Request) {
     });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    await logError('api_v1_documents_get', errorMessage, { originalError: error }, null, null);
+    await logError('api_v1_documents_get', errorMessage, { originalError: String(error) });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
