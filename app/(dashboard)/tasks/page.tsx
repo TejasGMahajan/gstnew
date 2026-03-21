@@ -12,6 +12,12 @@ import Pagination from '@/components/shared/Pagination';
 import { UpgradePrompt } from '@/lib/featureGate';
 import { CheckCircle, Clock, AlertTriangle, TrendingUp, RefreshCw, CalendarDays } from 'lucide-react';
 import type { ComplianceTask } from '@/lib/supabase/types';
+import { transitionTaskStatus } from '@/lib/api';
+
+const DONE_STATUSES = new Set<string>(['filed', 'acknowledged', 'locked']);
+const ACTIVE_STATUSES = new Set<string>(['created', 'awaiting_documents', 'under_review', 'ready_to_file']);
+const isTaskDone = (t: ComplianceTask) => DONE_STATUSES.has(t.status);
+const isTaskOverdue = (t: ComplianceTask) => ACTIVE_STATUSES.has(t.status) && new Date(t.due_date) < new Date();
 
 const FREE_TASKS_LIMIT = 3;
 const PAGE_SIZE = 8;
@@ -45,8 +51,8 @@ function DaysBadge({ dueDate }: { dueDate: string }) {
 }
 
 function taskBorderColor(task: ComplianceTask) {
-  if (task.status === 'completed') return 'border-l-emerald-500';
-  if (task.status === 'overdue') return 'border-l-rose-500';
+  if (isTaskDone(task)) return 'border-l-emerald-500';
+  if (isTaskOverdue(task)) return 'border-l-rose-500';
   const diff = Math.ceil((new Date(task.due_date).getTime() - Date.now()) / 86400000);
   if (diff <= 3) return 'border-l-amber-500';
   return 'border-l-indigo-400';
@@ -115,16 +121,11 @@ export default function TasksPage() {
     if (!business || markingId) return;
     setMarkingId(taskId);
     try {
-      const { error } = await supabase
-        .from('compliance_tasks')
-        .update({ status: 'completed', completed_at: new Date().toISOString() })
-        .eq('id', taskId)
-        .eq('business_id', business.id);
-
-      if (!error) {
-        setAllTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' as const } : t));
-        await logUserAction('mark_complete', 'compliance_task', taskId, 'Task marked complete', business.id);
-      }
+      await transitionTaskStatus(taskId, 'acknowledged');
+      setAllTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'acknowledged' as const } : t));
+      await logUserAction('completed', 'task', taskId, 'Task marked complete by owner', business.id);
+    } catch {
+      // task may already be in terminal state — ignore
     } finally {
       setMarkingId(null);
     }
@@ -133,9 +134,9 @@ export default function TasksPage() {
   // ── Filtering ────────────────────────────────────────────────────────────
 
   const filtered = allTasks.filter(t => {
-    if (activeTab === 'pending') return t.status === 'pending';
-    if (activeTab === 'overdue') return t.status === 'overdue';
-    if (activeTab === 'completed') return t.status === 'completed';
+    if (activeTab === 'pending') return ACTIVE_STATUSES.has(t.status) && !isTaskOverdue(t);
+    if (activeTab === 'overdue') return isTaskOverdue(t);
+    if (activeTab === 'completed') return isTaskDone(t);
     return true;
   }).filter(t => {
     if (selectedMonth === 0) return true;
@@ -155,9 +156,9 @@ export default function TasksPage() {
 
   // Stats
   const total = allTasks.length;
-  const pending = allTasks.filter(t => t.status === 'pending').length;
-  const overdue = allTasks.filter(t => t.status === 'overdue').length;
-  const completed = allTasks.filter(t => t.status === 'completed').length;
+  const overdue = allTasks.filter(isTaskOverdue).length;
+  const completed = allTasks.filter(isTaskDone).length;
+  const pending = allTasks.filter(t => ACTIVE_STATUSES.has(t.status) && !isTaskOverdue(t)).length;
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   const tabs: { key: FilterTab; label: string; count: number }[] = [
@@ -270,7 +271,7 @@ export default function TasksPage() {
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <StatusBadge status={task.status} />
-                  {task.status !== 'completed' && (
+                  {!isTaskDone(task) && (
                     <button
                       onClick={() => handleMarkComplete(task.id)}
                       disabled={markingId === task.id}

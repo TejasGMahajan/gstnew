@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
-import { logUserAction } from '@/lib/api';
+import { transitionTaskStatus, logUserAction } from '@/lib/api';
 import StatsCard from '@/components/shared/StatsCard';
 import { SkeletonCard, SkeletonRow } from '@/components/shared/SkeletonCard';
 import StatusBadge from '@/components/shared/StatusBadge';
@@ -63,9 +63,17 @@ function DaysBadge({ dueDate }: { dueDate: string }) {
   return <span className="text-xs px-2 py-0.5 bg-slate-50 text-slate-600 rounded-full font-medium border border-slate-200">Due in {diff}d</span>;
 }
 
+const DONE_STATUSES = new Set<string>(['filed', 'acknowledged', 'locked']);
+const ACTIVE_STATUSES = new Set<string>(['created', 'awaiting_documents', 'under_review', 'ready_to_file']);
+
+function isTaskDone(t: ComplianceTask) { return DONE_STATUSES.has(t.status); }
+function isTaskOverdue(t: ComplianceTask) {
+  return ACTIVE_STATUSES.has(t.status) && new Date(t.due_date) < new Date();
+}
+
 function taskBorderColor(task: ComplianceTask) {
-  if (task.status === 'completed') return 'border-l-emerald-500';
-  if (task.status === 'overdue') return 'border-l-rose-500';
+  if (isTaskDone(task)) return 'border-l-emerald-500';
+  if (isTaskOverdue(task)) return 'border-l-rose-500';
   const due = new Date(task.due_date);
   const diff = Math.ceil((due.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
   if (diff <= 3) return 'border-l-amber-500';
@@ -80,8 +88,8 @@ interface Subscription {
 }
 
 interface StorageUsage {
-  used_bytes: number;
-  total_bytes: number;
+  used_mb: number;
+  total_mb: number;
 }
 
 interface WhatsAppCredits {
@@ -144,7 +152,7 @@ export default function DashboardOwnerPage() {
 
         supabase
           .from('storage_usage')
-          .select('used_bytes, total_bytes')
+          .select('used_mb, total_mb')
           .eq('business_id', biz.id)
           .maybeSingle(),
 
@@ -174,40 +182,36 @@ export default function DashboardOwnerPage() {
     if (!business || markingDone) return;
     setMarkingDone(taskId);
     try {
-      const { error } = await supabase
-        .from('compliance_tasks')
-        .update({ status: 'completed', completed_at: new Date().toISOString() })
-        .eq('id', taskId)
-        .eq('business_id', business.id); // security: always include business_id
-
-      if (!error) {
-        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' as const } : t));
-        await logUserAction('mark_complete', 'compliance_task', taskId, 'Task marked as complete', business.id);
-      }
+      // Uses transitionTaskStatus RPC which allows any active → acknowledged
+      await transitionTaskStatus(taskId, 'acknowledged');
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'acknowledged' as const } : t));
+      await logUserAction('completed', 'task', taskId, 'Task marked as complete by owner', business.id);
+    } catch {
+      // silently ignore — task may already be in a terminal state
     } finally {
       setMarkingDone(null);
     }
   };
 
   // ── Derived Stats ────────────────────────────────────────────────────────
-  const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'overdue');
-  const overdueTasks = tasks.filter(t => t.status === 'overdue');
-  const completedTasks = tasks.filter(t => t.status === 'completed');
+  const overdueTasks = tasks.filter(isTaskOverdue);
+  const completedTasks = tasks.filter(isTaskDone);
+  const pendingTasks = tasks.filter(t => ACTIVE_STATUSES.has(t.status));
   const complianceScore = tasks.length > 0
     ? Math.round((completedTasks.length / tasks.length) * 100)
     : 100;
 
   const upcomingTasks = tasks
-    .filter(t => t.status !== 'completed')
+    .filter(t => !isTaskDone(t))
     .slice(0, 5);
 
   const nextDeadline = upcomingTasks[0]
     ? Math.ceil((new Date(upcomingTasks[0].due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
 
-  const storageMB = storageUsage ? (storageUsage.used_bytes / 1024 / 1024).toFixed(1) : '0';
-  const storageLimitMB = storageUsage ? (storageUsage.total_bytes / 1024 / 1024).toFixed(0) : (subscription?.plan_type === 'pro' ? '2048' : '100');
-  const storagePercent = storageUsage ? Math.min(100, (storageUsage.used_bytes / storageUsage.total_bytes) * 100) : 0;
+  const storageMB = storageUsage ? storageUsage.used_mb.toFixed(1) : '0';
+  const storageLimitMB = storageUsage ? storageUsage.total_mb.toFixed(0) : (subscription?.plan_type === 'pro' ? '2048' : '100');
+  const storagePercent = storageUsage ? Math.min(100, (storageUsage.used_mb / storageUsage.total_mb) * 100) : 0;
 
   const plan = subscription?.plan_type || 'free';
 
@@ -330,7 +334,7 @@ export default function DashboardOwnerPage() {
                       </div>
                     </div>
                     <StatusBadge status={task.status} />
-                    {task.status !== 'completed' && (
+                    {!isTaskDone(task) && (
                       <button
                         onClick={() => handleMarkDone(task.id)}
                         disabled={markingDone === task.id}
