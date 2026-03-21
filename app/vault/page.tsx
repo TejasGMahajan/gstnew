@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Upload, FolderOpen, History, Download, Eye } from 'lucide-react';
+import { FileText, Upload, FolderOpen, History, Download, Eye, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
@@ -65,12 +65,23 @@ export default function DocumentVault() {
   const currentYear = new Date().getFullYear();
   const [uploadMonth, setUploadMonth] = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
   const [uploadYear, setUploadYear] = useState(String(currentYear));
+  const DOC_PAGE_SIZE = 12;
+  const [docPage, setDocPage] = useState(1);
+  const [showTop, setShowTop] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
     }
   }, [user, authLoading, router]);
+
+  useEffect(() => { setDocPage(1); }, [selectedCategory]);
+
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 400);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     if (user && profile) {
@@ -186,7 +197,10 @@ export default function DocumentVault() {
       ? documents
       : documents.filter((doc) => doc.category === selectedCategory);
 
-  if (authLoading || loading) {
+  const totalDocPages = Math.ceil(filteredDocuments.length / DOC_PAGE_SIZE);
+  const pagedDocuments = filteredDocuments.slice((docPage - 1) * DOC_PAGE_SIZE, docPage * DOC_PAGE_SIZE);
+
+  if (authLoading) {
     return <LoadingSpinner message="Loading vault..." />;
   }
 
@@ -279,7 +293,11 @@ export default function DocumentVault() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredDocuments.map((doc) => (
+                {loading ? (
+                  [1,2,3,4,5,6].map(i => (
+                    <div key={i} className="h-32 bg-slate-100 animate-pulse rounded-lg" />
+                  ))
+                ) : pagedDocuments.map((doc) => (
                   <Card
                     key={doc.id}
                     className="border-2 border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all"
@@ -333,7 +351,7 @@ export default function DocumentVault() {
                   </Card>
                 ))}
 
-                {filteredDocuments.length === 0 && (
+                {!loading && filteredDocuments.length === 0 && (
                   <div className="col-span-full">
                     <EmptyState
                       icon={FolderOpen}
@@ -346,6 +364,18 @@ export default function DocumentVault() {
                   </div>
                 )}
               </div>
+
+              {totalDocPages > 1 && (
+                <div className="flex items-center justify-between mt-6">
+                  <Button size="sm" variant="outline" onClick={() => setDocPage(p => Math.max(1, p - 1))} disabled={docPage === 1}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm text-slate-600">Page {docPage} of {totalDocPages}</span>
+                  <Button size="sm" variant="outline" onClick={() => setDocPage(p => Math.min(totalDocPages, p + 1))} disabled={docPage === totalDocPages}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -418,6 +448,16 @@ export default function DocumentVault() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {showTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-6 right-6 z-50 bg-blue-900 text-white p-3 rounded-full shadow-lg hover:bg-blue-800 transition-colors"
+          aria-label="Back to top"
+        >
+          <ChevronUp className="h-5 w-5" />
+        </button>
+      )}
 
       {/* Audit Trail Dialog */}
       <Dialog open={auditDialogOpen} onOpenChange={setAuditDialogOpen}>

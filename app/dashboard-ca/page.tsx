@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Users, TrendingUp, Download, Upload, Send, CreditCard as Edit, Clock, CircleAlert as AlertCircle, UserPlus, Copy, CheckCheck, Mail, FileDown, MessageSquare } from 'lucide-react';
+import { Users, TrendingUp, Download, Upload, Send, CreditCard as Edit, Clock, CircleAlert as AlertCircle, UserPlus, Copy, CheckCheck, Mail, FileDown, MessageSquare, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
@@ -80,11 +80,21 @@ export default function CADashboard() {
   // Bulk selection state
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
 
+  const CLIENT_PAGE_SIZE = 10;
+  const [clientPage, setClientPage] = useState(1);
+  const [showTop, setShowTop] = useState(false);
+
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
     }
   }, [user, authLoading, router]);
+
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 400);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     if (user && profile) {
@@ -466,7 +476,10 @@ export default function CADashboard() {
     }
   };
 
-  if (authLoading || loading) {
+  const totalClientPages = Math.ceil(clients.length / CLIENT_PAGE_SIZE);
+  const pagedClients = clients.slice((clientPage - 1) * CLIENT_PAGE_SIZE, clientPage * CLIENT_PAGE_SIZE);
+
+  if (authLoading) {
     return <LoadingSpinner message="Loading CA dashboard..." />;
   }
 
@@ -484,51 +497,64 @@ export default function CADashboard() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="shadow-lg border-slate-200">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Total Clients</CardTitle>
-                <Users className="h-5 w-5 text-blue-900" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-4xl font-bold text-blue-900">{clients.length}</p>
-              <p className="text-sm text-slate-600 mt-1">Active businesses</p>
-            </CardContent>
-          </Card>
+          {loading ? (
+            [1,2,3].map(i => (
+              <Card key={i} className="shadow-lg border-slate-200">
+                <CardContent className="p-6">
+                  <div className="h-6 w-32 bg-slate-200 animate-pulse rounded mb-4" />
+                  <div className="h-10 w-20 bg-slate-200 animate-pulse rounded" />
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <>
+              <Card className="shadow-lg border-slate-200">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">Total Clients</CardTitle>
+                    <Users className="h-5 w-5 text-blue-900" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-4xl font-bold text-blue-900">{clients.length}</p>
+                  <p className="text-sm text-slate-600 mt-1">Active businesses</p>
+                </CardContent>
+              </Card>
 
-          <Card className="shadow-lg border-slate-200">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Pending Tasks</CardTitle>
-                <Clock className="h-5 w-5 text-yellow-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-4xl font-bold text-yellow-600">
-                {clients.reduce((sum, c) => sum + c.pending_docs, 0)}
-              </p>
-              <p className="text-sm text-slate-600 mt-1">Across all clients</p>
-            </CardContent>
-          </Card>
+              <Card className="shadow-lg border-slate-200">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">Pending Tasks</CardTitle>
+                    <Clock className="h-5 w-5 text-yellow-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-4xl font-bold text-yellow-600">
+                    {clients.reduce((sum, c) => sum + c.pending_docs, 0)}
+                  </p>
+                  <p className="text-sm text-slate-600 mt-1">Across all clients</p>
+                </CardContent>
+              </Card>
 
-          <Card className="shadow-lg border-slate-200">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Avg Compliance</CardTitle>
-                <TrendingUp className="h-5 w-5 text-green-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-4xl font-bold text-green-600">
-                {clients.length > 0
-                  ? Math.round(clients.reduce((sum, c) => sum + c.compliance_score, 0) / clients.length)
-                  : 0}
-                %
-              </p>
-              <p className="text-sm text-slate-600 mt-1">Portfolio health</p>
-            </CardContent>
-          </Card>
+              <Card className="shadow-lg border-slate-200">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">Avg Compliance</CardTitle>
+                    <TrendingUp className="h-5 w-5 text-green-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-4xl font-bold text-green-600">
+                    {clients.length > 0
+                      ? Math.round(clients.reduce((sum, c) => sum + c.compliance_score, 0) / clients.length)
+                      : 0}
+                    %
+                  </p>
+                  <p className="text-sm text-slate-600 mt-1">Portfolio health</p>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
 
         {/* Bulk action bar */}
@@ -590,11 +616,18 @@ export default function CADashboard() {
             )}
 
             <div className="space-y-3">
+              {/* Skeleton rows while loading */}
+              {loading && (
+                [1,2,3].map(i => (
+                  <div key={i} className="h-16 bg-slate-100 animate-pulse rounded-lg" />
+                ))
+              )}
+
               {/* Priority Clients */}
-              {clients.some((c) => ['pro', 'enterprise'].includes(c.plan_type)) && (
+              {!loading && pagedClients.some((c) => ['pro', 'enterprise'].includes(c.plan_type)) && (
                 <>
                   <p className="text-xs font-semibold uppercase tracking-wider text-green-700 mb-1">Priority Clients</p>
-                  {clients
+                  {pagedClients
                     .filter((c) => ['pro', 'enterprise'].includes(c.plan_type))
                     .map((client) => (
                       <div
@@ -644,10 +677,10 @@ export default function CADashboard() {
               )}
 
               {/* Standard Clients */}
-              {clients.some((c) => !['pro', 'enterprise'].includes(c.plan_type)) && (
+              {!loading && pagedClients.some((c) => !['pro', 'enterprise'].includes(c.plan_type)) && (
                 <>
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mt-4 mb-1">Standard Clients</p>
-                  {clients
+                  {pagedClients
                     .filter((c) => !['pro', 'enterprise'].includes(c.plan_type))
                     .map((client) => (
                       <div
@@ -708,7 +741,7 @@ export default function CADashboard() {
                 </div>
               ))}
 
-              {clients.length === 0 && pendingClients.length === 0 && (
+              {!loading && clients.length === 0 && pendingClients.length === 0 && (
                 <div className="text-center py-8 text-slate-500">
                   <EmptyState
                     icon={Users}
@@ -718,6 +751,18 @@ export default function CADashboard() {
                 </div>
               )}
             </div>
+
+            {totalClientPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <Button size="sm" variant="outline" onClick={() => setClientPage(p => Math.max(1, p - 1))} disabled={clientPage === 1}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm text-slate-600">Page {clientPage} of {totalClientPages}</span>
+                <Button size="sm" variant="outline" onClick={() => setClientPage(p => Math.min(totalClientPages, p + 1))} disabled={clientPage === totalClientPages}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -910,6 +955,16 @@ export default function CADashboard() {
         onClose={() => setInviteOpen(false)}
         onSuccess={() => { setInviteOpen(false); loadCADashboard(); }}
       />
+
+      {showTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-6 right-6 z-50 bg-blue-900 text-white p-3 rounded-full shadow-lg hover:bg-blue-800 transition-colors"
+          aria-label="Back to top"
+        >
+          <ChevronUp className="h-5 w-5" />
+        </button>
+      )}
     </div>
   );
 }
@@ -1160,9 +1215,12 @@ function ClientTasksList({
 }) {
   const [tasks, setTasks] = useState<ComplianceTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const TASK_PAGE_SIZE = 8;
+  const [taskPage, setTaskPage] = useState(1);
 
   useEffect(() => {
     loadTasks();
+    setTaskPage(1);
   }, [clientId]);
 
   const loadTasks = async () => {
@@ -1186,9 +1244,12 @@ function ClientTasksList({
     );
   }
 
+  const totalTaskPages = Math.ceil(tasks.length / TASK_PAGE_SIZE);
+  const pagedTasks = tasks.slice((taskPage - 1) * TASK_PAGE_SIZE, taskPage * TASK_PAGE_SIZE);
+
   return (
     <div className="space-y-3">
-      {tasks.map((task) => (
+      {pagedTasks.map((task) => (
         <div
           key={task.id}
           onClick={() => onTaskClick(task)}
@@ -1226,6 +1287,18 @@ function ClientTasksList({
           title="No tasks for this client"
           description="Tasks will appear here when added"
         />
+      )}
+
+      {totalTaskPages > 1 && (
+        <div className="flex items-center justify-between mt-4 pt-4 border-t">
+          <Button size="sm" variant="outline" onClick={() => setTaskPage(p => Math.max(1, p - 1))} disabled={taskPage === 1}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm text-slate-600">Page {taskPage} of {totalTaskPages}</span>
+          <Button size="sm" variant="outline" onClick={() => setTaskPage(p => Math.min(totalTaskPages, p + 1))} disabled={taskPage === totalTaskPages}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       )}
     </div>
   );

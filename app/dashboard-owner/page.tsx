@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Bell, HardDrive, Zap, TrendingUp, CircleAlert as AlertCircle, CircleCheck as CheckCircle2, Clock, Shield } from 'lucide-react';
+import { Bell, HardDrive, Zap, TrendingUp, CircleAlert as AlertCircle, CircleCheck as CheckCircle2, Clock, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -56,6 +56,8 @@ export default function OwnerDashboard() {
   const [storage, setStorage] = useState<StorageUsage | null>(null);
   const [credits, setCredits] = useState<WhatsAppCredits | null>(null);
   const [loading, setLoading] = useState(true);
+  const TASK_PAGE_SIZE = 8;
+  const [taskPage, setTaskPage] = useState(1);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -151,6 +153,9 @@ export default function OwnerDashboard() {
   if (authLoading || loading) {
     return <LoadingSpinner message="Loading dashboard..." />;
   }
+
+  const totalTaskPages = Math.ceil(tasks.length / TASK_PAGE_SIZE);
+  const pagedTasks = tasks.slice((taskPage - 1) * TASK_PAGE_SIZE, taskPage * TASK_PAGE_SIZE);
 
   const complianceScore = business?.compliance_score || 0;
   const storagePercent = storage ? (storage.used_mb / storage.total_mb) * 100 : 0;
@@ -353,8 +358,8 @@ export default function OwnerDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {tasks.slice(0, 10).map((task) => {
+              <div className="space-y-3">
+                {pagedTasks.map((task) => {
                   const daysUntil = differenceInDays(new Date(task.due_date), new Date());
                   const isOverdue = daysUntil < 0;
                   const isDueSoon = daysUntil >= 0 && daysUntil <= 3;
@@ -408,6 +413,17 @@ export default function OwnerDashboard() {
                   <EmptyState icon={Clock} title="No upcoming tasks" description="You're all caught up!" />
                 )}
               </div>
+              {totalTaskPages > 1 && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <Button size="sm" variant="outline" onClick={() => setTaskPage(p => Math.max(1, p - 1))} disabled={taskPage === 1}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm text-slate-600">Page {taskPage} of {totalTaskPages}</span>
+                  <Button size="sm" variant="outline" onClick={() => setTaskPage(p => Math.min(totalTaskPages, p + 1))} disabled={taskPage === totalTaskPages}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
