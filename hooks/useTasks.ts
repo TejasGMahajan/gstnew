@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { taskService } from '../services/task.service';
+import { taskService } from '@/lib/services/task.service';
 import { Task } from '@/types';
 
 export function useTasks(businessId: string | null) {

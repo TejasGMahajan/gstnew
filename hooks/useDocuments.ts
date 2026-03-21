@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { documentService } from '../services/document.service';
+import { documentService } from '@/lib/services/document.service';
 import { Document } from '@/types';
 
 export function useDocuments(businessId: string | null) {
