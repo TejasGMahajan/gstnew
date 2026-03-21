@@ -5,6 +5,8 @@ publish = ".next"
 [build.environment]
 NODE_VERSION = "20"
 NPM_FLAGS = "--legacy-peer-deps"
+# NEXT_PUBLIC_* vars are intentionally embedded in the client bundle — skip secrets scan
+SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_SUPABASE_URL"
 
 [[plugins]]
 package = "@netlify/plugin-nextjs"
