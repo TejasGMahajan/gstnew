@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-// Auth is handled client-side via useAuth / authGuard hooks.
-// This middleware is a thin pass-through; it exists only so Next.js
-// does not serve the matcher routes as static files.
-export function middleware(_req: NextRequest) {
+// Thin pass-through: auth is handled client-side via AuthContext.
+// Supabase localStorage auth cannot be read server-side without cookie-based auth helpers.
+export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
@@ -13,7 +13,8 @@ export const config = {
     '/dashboard-ca/:path*',
     '/dashboard-admin/:path*',
     '/vault/:path*',
-    '/admin/:path*',
+    '/tasks/:path*',
     '/analytics/:path*',
+    '/admin/:path*',
   ],
 };

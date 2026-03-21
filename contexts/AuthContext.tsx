@@ -10,15 +10,24 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// SUPABASE FIX NEEDED: Run this SQL in Supabase Dashboard > SQL Editor:
-// CREATE POLICY "Users can read own profile" ON profiles
-//   FOR SELECT USING (auth.uid() = id);
-// CREATE POLICY "Users can update own profile" ON profiles
-//   FOR UPDATE USING (auth.uid() = id);
+// SUPABASE RLS REQUIRED — run in Supabase SQL Editor:
+// CREATE POLICY "Users can read own profile" ON profiles FOR SELECT USING (auth.uid() = id);
+// CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
+
+async function fetchProfile(userId: string): Promise<Profile | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error) console.error('[AuthContext] profile fetch error:', error.message);
+  return data ?? null;
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -26,44 +35,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null);
-
-      if (session?.user) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .maybeSingle();
-
-        if (error) {
-          console.error('[AuthContext] Profile fetch error:', error.message, error.code, error.details);
-        }
-        setProfile(data ?? null);
-      }
-
+      if (session?.user) setProfile(await fetchProfile(session.user.id));
       setLoading(false);
-    };
+    });
 
-    getSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
-
       if (session?.user) {
-        (async () => {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .maybeSingle();
-
-          if (error) {
-            console.error('[AuthContext] Profile fetch error (onAuthStateChange):', error.message, error.code);
-          }
-          setProfile(data ?? null);
-        })();
+        setProfile(await fetchProfile(session.user.id));
       } else {
         setProfile(null);
       }
@@ -72,6 +53,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const refreshProfile = async () => {
+    if (user) setProfile(await fetchProfile(user.id));
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -79,16 +64,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+}

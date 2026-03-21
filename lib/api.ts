@@ -322,5 +322,5 @@ export async function logUserAction(
     entity_id: entityId,
     action,
     description: sanitizeText(description),
-  }).then(() => {}).catch(() => {}); // Fire and forget
+  }).then(() => {}, () => {}); // Fire and forget
 }

@@ -1,114 +1,152 @@
+// FILE: components/shared/WorkflowStepIndicator.tsx
 'use client';
 
-import React from 'react';
-import { CheckCircle2, Circle, ArrowRight } from 'lucide-react';
+import { Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-const WORKFLOW_STEPS = [
-  { key: 'created', label: 'Created', color: 'blue' },
-  { key: 'awaiting_documents', label: 'Awaiting Docs', color: 'yellow' },
-  { key: 'under_review', label: 'Under Review', color: 'orange' },
-  { key: 'ready_to_file', label: 'Ready to File', color: 'purple' },
-  { key: 'filed', label: 'Filed', color: 'cyan' },
-  { key: 'acknowledged', label: 'Acknowledged', color: 'green' },
-  { key: 'locked', label: 'Locked', color: 'slate' },
+// ─── Status Config ────────────────────────────────────────────────────────────
+
+const STEPS = [
+  { key: 'created', label: 'Created', index: 0 },
+  { key: 'awaiting_documents', label: 'Awaiting Docs', index: 1 },
+  { key: 'under_review', label: 'Under Review', index: 2 },
+  { key: 'filed', label: 'Filed', index: 3 },
+  { key: 'acknowledged', label: 'Acknowledged', index: 4 },
 ];
+
+const STATUS_TO_STEP: Record<string, number> = {
+  created: 0,
+  awaiting_documents: 1,
+  under_review: 2,
+  filed: 3,
+  acknowledged: 4,
+  locked: 4,
+  completed: 4,
+  pending: 0,
+  overdue: 0,
+};
+
+// ─── Exports ──────────────────────────────────────────────────────────────────
+
+export function getStatusLabel(status: string): string {
+  const step = STEPS.find(s => s.key === status);
+  if (step) return step.label;
+  if (status === 'pending') return 'Pending';
+  if (status === 'overdue') return 'Overdue';
+  if (status === 'completed') return 'Completed';
+  if (status === 'locked') return 'Locked';
+  return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+export function getNextAllowedStatus(status: string): string | null {
+  switch (status) {
+    case 'created':
+    case 'pending':
+      return 'awaiting_documents';
+    case 'awaiting_documents':
+      return 'under_review';
+    case 'under_review':
+      return 'filed';
+    case 'filed':
+      return 'acknowledged';
+    case 'acknowledged':
+      return 'locked';
+    case 'locked':
+    case 'completed':
+      return null;
+    default:
+      return null;
+  }
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 interface WorkflowStepIndicatorProps {
   currentStatus: string;
   compact?: boolean;
 }
 
-export default function WorkflowStepIndicator({
-  currentStatus,
-  compact = false,
-}: WorkflowStepIndicatorProps) {
-  const currentIdx = WORKFLOW_STEPS.findIndex((s) => s.key === currentStatus);
+export default function WorkflowStepIndicator({ currentStatus, compact = false }: WorkflowStepIndicatorProps) {
+  const currentIndex = STATUS_TO_STEP[currentStatus] ?? 0;
 
   if (compact) {
+    // Compact mode: just colored dots
     return (
       <div className="flex items-center gap-1">
-        {WORKFLOW_STEPS.map((step, idx) => {
-          const isComplete = idx < currentIdx;
-          const isCurrent = idx === currentIdx;
+        {STEPS.map((step, i) => {
+          const isCompleted = i < currentIndex;
+          const isCurrent = i === currentIndex;
           return (
-            <React.Fragment key={step.key}>
+            <div key={step.key} className="flex items-center gap-1">
               <div
-                className={`h-2.5 w-2.5 rounded-full transition-all ${
-                  isComplete
-                    ? 'bg-green-500'
-                    : isCurrent
-                    ? 'bg-blue-500 ring-2 ring-blue-200'
-                    : 'bg-slate-200'
-                }`}
+                className={cn(
+                  'w-2.5 h-2.5 rounded-full transition-all',
+                  isCompleted ? 'bg-emerald-500' :
+                  isCurrent ? 'bg-indigo-600 ring-2 ring-indigo-200' :
+                  'bg-slate-200'
+                )}
                 title={step.label}
               />
-              {idx < WORKFLOW_STEPS.length - 1 && (
-                <div
-                  className={`h-0.5 w-3 ${
-                    idx < currentIdx ? 'bg-green-400' : 'bg-slate-200'
-                  }`}
-                />
+              {i < STEPS.length - 1 && (
+                <div className={cn('w-4 h-0.5 transition-all', i < currentIndex ? 'bg-emerald-400' : 'bg-slate-200')} />
               )}
-            </React.Fragment>
+            </div>
           );
         })}
       </div>
     );
   }
 
+  // Full mode: numbered circles with labels
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {WORKFLOW_STEPS.map((step, idx) => {
-        const isComplete = idx < currentIdx;
-        const isCurrent = idx === currentIdx;
-        const isLocked = step.key === 'locked' && currentStatus === 'locked';
+    <div className="flex items-start gap-0 w-full overflow-x-auto">
+      {STEPS.map((step, i) => {
+        const isCompleted = i < currentIndex;
+        const isCurrent = i === currentIndex;
+        const isFuture = i > currentIndex;
 
         return (
-          <React.Fragment key={step.key}>
-            <div
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                isLocked
-                  ? 'bg-slate-800 text-white'
-                  : isComplete
-                  ? 'bg-green-100 text-green-800'
-                  : isCurrent
-                  ? 'bg-blue-100 text-blue-800 ring-2 ring-blue-300'
-                  : 'bg-slate-100 text-slate-400'
-              }`}
-            >
-              {isComplete ? (
-                <CheckCircle2 className="h-3.5 w-3.5" />
-              ) : (
-                <Circle className="h-3.5 w-3.5" />
-              )}
-              {step.label}
+          <div key={step.key} className="flex items-start flex-1 min-w-0">
+            {/* Step */}
+            <div className="flex flex-col items-center flex-shrink-0">
+              <div
+                className={cn(
+                  'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all',
+                  isCompleted
+                    ? 'bg-emerald-500 text-white'
+                    : isCurrent
+                    ? 'bg-indigo-600 text-white ring-4 ring-indigo-100'
+                    : 'bg-slate-100 text-slate-400'
+                )}
+              >
+                {isCompleted ? <Check className="w-4 h-4" /> : <span>{i + 1}</span>}
+              </div>
+              <p
+                className={cn(
+                  'text-xs mt-1.5 font-medium text-center leading-tight max-w-[60px]',
+                  isCompleted ? 'text-emerald-700' :
+                  isCurrent ? 'text-indigo-700' :
+                  'text-slate-400'
+                )}
+              >
+                {step.label}
+              </p>
             </div>
-            {idx < WORKFLOW_STEPS.length - 1 && (
-              <ArrowRight
-                className={`h-3.5 w-3.5 flex-shrink-0 ${
-                  idx < currentIdx ? 'text-green-400' : 'text-slate-300'
-                }`}
-              />
+
+            {/* Connector line */}
+            {i < STEPS.length - 1 && (
+              <div className="flex-1 flex items-start mt-4">
+                <div
+                  className={cn(
+                    'w-full h-0.5 transition-all',
+                    i < currentIndex ? 'bg-emerald-400' : 'bg-slate-200'
+                  )}
+                />
+              </div>
             )}
-          </React.Fragment>
+          </div>
         );
       })}
     </div>
   );
-}
-
-/**
- * Returns the allowed next status given the current status, or null if locked.
- */
-export function getNextAllowedStatus(currentStatus: string): string | null {
-  const idx = WORKFLOW_STEPS.findIndex((s) => s.key === currentStatus);
-  if (idx < 0 || idx >= WORKFLOW_STEPS.length - 1) return null;
-  return WORKFLOW_STEPS[idx + 1].key;
-}
-
-/**
- * Returns human-readable label for a status key.
- */
-export function getStatusLabel(status: string): string {
-  return WORKFLOW_STEPS.find((s) => s.key === status)?.label || status;
 }

@@ -1,501 +1,548 @@
+// FILE: app/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
-  FileCheck,
-  Shield,
-  Bell,
-  FolderOpen,
-  Users,
-  CalendarClock,
-  CreditCard,
-  Star,
-  MessageSquare,
-  Clock,
-  CheckCircle2,
-  ChevronRight,
-  Smartphone,
-  Lock,
-  Zap,
-  ArrowRight,
+  Calendar, FileCheck, Bell, Users, ShieldCheck, TrendingUp,
+  AlertTriangle, FolderOpen, Clock, CheckCircle, ArrowRight,
+  ChevronRight, Star, Menu, X
 } from 'lucide-react';
 
-// ─── Data ────────────────────────────────────────────────────────────────────
+// ─── Animated Counter ────────────────────────────────────────────────────────
 
-const PAIN_POINTS = [
-  {
-    icon: Clock,
-    title: 'Documents at 11 PM on the due date',
-    description:
-      'Your clients wait until the last moment — then flood you with photos from WhatsApp when the portal is about to close.',
-  },
-  {
-    icon: MessageSquare,
-    title: '40+ clients across WhatsApp groups',
-    description:
-      'You\'re chasing follow-ups in a dozen groups, manually tracking who has sent what, with zero audit trail.',
-  },
-  {
-    icon: CalendarClock,
-    title: 'One missed deadline every quarter',
-    description:
-      'With so many filings across so many clients, something slips. A penalty. An angry call. A lost client.',
-  },
-];
+function AnimatedCounter({ target, prefix = '', suffix = '' }: { target: number; prefix?: string; suffix?: string }) {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  const started = useRef(false);
 
-const HOW_IT_WORKS = [
-  {
-    step: '01',
-    title: 'Add your clients',
-    description: 'Invite clients by email or GSTIN. They join in one click — no setup required on their end.',
-  },
-  {
-    step: '02',
-    title: 'Clients get reminders & upload documents',
-    description: 'Automated WhatsApp reminders go out. Clients upload directly to their secure vault — no WhatsApp forwarding.',
-  },
-  {
-    step: '03',
-    title: 'Everything organised, on time',
-    description: 'Track every filing across all clients on one dashboard. Deadlines met. No chasing. More clients served.',
-  },
-];
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !started.current) {
+          started.current = true;
+          const duration = 2000;
+          const steps = 60;
+          const increment = target / steps;
+          let current = 0;
+          const timer = setInterval(() => {
+            current = Math.min(current + increment, target);
+            setCount(Math.floor(current));
+            if (current >= target) clearInterval(timer);
+          }, duration / steps);
+        }
+      },
+      { threshold: 0.3 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [target]);
 
-const FEATURES = [
-  {
-    icon: Bell,
-    color: 'bg-indigo-100 text-indigo-700',
-    title: 'Automated WhatsApp Reminders',
-    description: 'Clients get timely nudges before every deadline — GSTR-1, GSTR-3B, TDS, PF/ESI — so you never have to chase.',
-  },
-  {
-    icon: CalendarClock,
-    color: 'bg-blue-100 text-blue-700',
-    title: 'Compliance Deadline Calendar',
-    description: 'A full Indian compliance calendar auto-generated for each client. Monthly + annual filings, all tracked.',
-  },
-  {
-    icon: FolderOpen,
-    color: 'bg-emerald-100 text-emerald-700',
-    title: 'Secure Document Vault',
-    description: 'Clients upload invoices, GST returns, and acknowledgements to a structured, encrypted vault — not a WhatsApp chat.',
-  },
-  {
-    icon: Users,
-    color: 'bg-violet-100 text-violet-700',
-    title: 'CA–Business Collaboration',
-    description: 'Review documents, mark tasks complete, and communicate with clients — all inside one workflow.',
-  },
-  {
-    icon: Star,
-    color: 'bg-amber-100 text-amber-700',
-    title: 'Priority Client Management',
-    description: 'Pro and enterprise clients are surfaced first. Assign priority flags so high-value work never gets buried.',
-  },
-  {
-    icon: CreditCard,
-    color: 'bg-rose-100 text-rose-700',
-    title: 'Built-in Razorpay Billing',
-    description: 'Collect annual retainer fees from clients directly through the platform. Invoices and payment history included.',
-  },
-];
-
-const CA_FEATURES = [
-  'Unlimited client dashboard',
-  'Automated WhatsApp alerts',
-  'Compliance deadline calendar',
-  'Document review workflow',
-  'Client invite via email / GSTIN',
-  'PDF compliance reports',
-];
-
-const BUSINESS_FEATURES = [
-  'Secure document vault',
-  'GSTR filing reminders',
-  'Direct CA collaboration',
-  'Payment via Razorpay',
-  'Acknowledgement storage',
-  'Priority support',
-];
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function Logo() {
   return (
-    <div className="flex items-center gap-2">
-      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-900 to-blue-600 flex items-center justify-center shadow-sm">
-        <FileCheck className="h-5 w-5 text-white" />
-      </div>
-      <span className="text-lg font-bold text-slate-900 tracking-tight">ComplianceHub</span>
-    </div>
+    <span ref={ref}>
+      {prefix}{count.toLocaleString('en-IN')}{suffix}
+    </span>
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Landing Page ────────────────────────────────────────────────────────────
 
-export default function Home() {
-  const router = useRouter();
+export default function LandingPage() {
   const { user, loading } = useAuth();
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    if (!loading && user) {
-      router.push('/dashboard');
-    }
-  }, [user, loading, router]);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin h-10 w-10 border-4 border-blue-900 border-t-transparent rounded-full" />
-      </div>
-    );
-  }
+  const router = useRouter();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 antialiased">
+    <div className="min-h-screen bg-[#0F172A] text-white">
+      {/* ── Navigation ── */}
+      <nav className="border-b border-white/10 sticky top-0 z-50 bg-[#0F172A]/95 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                <FileCheck className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-lg font-bold text-white">ComplianceHub</span>
+            </div>
 
-      {/* ── Sticky Header ──────────────────────────────────────────────────── */}
-      <header
-        className={`sticky top-0 z-50 bg-white transition-shadow duration-200 ${
-          scrolled ? 'shadow-md' : 'border-b border-slate-100'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Logo />
-          <nav className="hidden md:flex items-center gap-6 text-sm text-slate-600">
-            <a href="#how-it-works" className="hover:text-blue-900 transition-colors">How it works</a>
-            <a href="#features" className="hover:text-blue-900 transition-colors">Features</a>
-            <a href="#pricing" className="hover:text-blue-900 transition-colors">Pricing</a>
-          </nav>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push('/login')}
-              className="text-slate-700 hover:text-blue-900"
+            {/* Desktop Nav */}
+            <div className="hidden md:flex items-center gap-6">
+              <a href="#features" className="text-sm text-slate-400 hover:text-white transition-colors">Features</a>
+              <a href="#how-it-works" className="text-sm text-slate-400 hover:text-white transition-colors">How It Works</a>
+              <a href="#pricing" className="text-sm text-slate-400 hover:text-white transition-colors">Pricing</a>
+            </div>
+
+            {/* CTA */}
+            <div className="hidden md:flex items-center gap-3">
+              {loading ? (
+                <div className="w-24 h-8 bg-slate-700 rounded animate-pulse" />
+              ) : user ? (
+                <a
+                  href="/dashboard"
+                  className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  Back to Dashboard
+                </a>
+              ) : (
+                <>
+                  <a href="/login" className="text-sm text-slate-300 hover:text-white transition-colors">Log in</a>
+                  <a
+                    href="/signup"
+                    className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                  >
+                    Sign Up Free
+                  </a>
+                </>
+              )}
+            </div>
+
+            {/* Mobile menu button */}
+            <button
+              className="md:hidden p-2 text-slate-400 hover:text-white"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
-              Login
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => router.push('/signup')}
-              className="bg-blue-900 hover:bg-blue-800 text-white"
-            >
-              Get Started Free
-            </Button>
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
-      </header>
 
-      {/* ── Hero ───────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white">
-        {/* decorative CSS shapes */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-          <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-blue-700/20 blur-3xl" />
-          <div className="absolute top-1/2 -left-24 w-72 h-72 rounded-full bg-indigo-600/15 blur-3xl" />
-          <div className="absolute bottom-0 right-1/4 w-64 h-64 rounded-full bg-blue-500/10 blur-2xl" />
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-white/10 px-4 py-4 space-y-3">
+            <a href="#features" className="block text-sm text-slate-300">Features</a>
+            <a href="#how-it-works" className="block text-sm text-slate-300">How It Works</a>
+            <a href="#pricing" className="block text-sm text-slate-300">Pricing</a>
+            <div className="pt-2 border-t border-white/10 flex flex-col gap-2">
+              {user ? (
+                <a href="/dashboard" className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg text-center">
+                  Back to Dashboard
+                </a>
+              ) : (
+                <>
+                  <a href="/login" className="px-4 py-2 text-slate-300 text-sm text-center">Log in</a>
+                  <a href="/signup" className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg text-center">
+                    Sign Up Free
+                  </a>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </nav>
+
+      {/* ── Hero ── */}
+      <section className="relative overflow-hidden">
+        {/* Gradient background glow */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl" />
+          <div className="absolute top-20 -left-20 w-72 h-72 bg-purple-600/10 rounded-full blur-3xl" />
         </div>
 
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-28 text-center">
-          <Badge className="mb-5 bg-blue-800/60 text-blue-200 border-blue-700 hover:bg-blue-800/60 text-sm px-3 py-1">
-            Built for Chartered Accountants in India
-          </Badge>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-500/20 border border-indigo-500/30 rounded-full text-indigo-300 text-xs font-medium mb-6">
+            <Star className="w-3 h-3" />
+            Built for Indian MSMEs & CAs
+          </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight tracking-tight mb-6">
-            Manage All Your GST Clients{' '}
-            <span className="text-blue-400">in One Place</span>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight max-w-4xl mx-auto">
+            Your CA's{' '}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
+              Compliance Operating System
+            </span>
           </h1>
 
-          <p className="text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Stop chasing documents on WhatsApp. Automate reminders, track deadlines,
-            and serve more clients — without extra staff.
+          <p className="mt-6 text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
+            Indian MSMEs face <strong className="text-white">998 legal obligations per year</strong>. ClearTax and Zoho
+            abandoned small businesses. ComplianceHub gives your CA a mission control — and you peace of mind.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
-              onClick={() => router.push('/signup?role=chartered_accountant')}
-              className="bg-blue-500 hover:bg-blue-400 text-white h-13 px-8 text-base font-semibold shadow-lg shadow-blue-900/40"
+          <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+            <a
+              href="/signup?role=chartered_accountant"
+              className="inline-flex items-center gap-2 px-8 py-3.5 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-colors text-base shadow-lg shadow-indigo-500/25"
             >
               Start Free as CA
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-            <Button
-              size="lg"
-              onClick={() => router.push('/signup')}
-              className="border-2 border-white text-white hover:bg-white hover:text-blue-900 h-12 px-8 text-base font-semibold bg-transparent"
+              <ArrowRight className="w-4 h-4" />
+            </a>
+            <a
+              href="/signup?role=business_owner"
+              className="inline-flex items-center gap-2 px-8 py-3.5 bg-white/10 border border-white/20 text-white font-semibold rounded-xl hover:bg-white/20 transition-colors text-base"
             >
-              I&apos;m a Business
-            </Button>
+              I'm a Business Owner
+              <ChevronRight className="w-4 h-4" />
+            </a>
           </div>
 
-          <p className="mt-5 text-sm text-slate-400">Free forever for CAs · No credit card required</p>
+          <p className="mt-4 text-xs text-slate-500">No credit card required. Free for CAs forever.</p>
         </div>
       </section>
 
-      {/* ── Trust Bar ──────────────────────────────────────────────────────── */}
-      <section className="bg-slate-50 border-b border-slate-200 py-5">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-10 text-sm text-slate-600 text-center">
-          <span className="font-semibold text-slate-700">Trusted by 50+ CAs in Maharashtra</span>
-          <span className="hidden sm:block text-slate-300">|</span>
-          <span className="flex items-center gap-1.5">
-            <Lock className="h-3.5 w-3.5 text-blue-700" />
-            Bank-grade security
-          </span>
-          <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-            GSTIN verified
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Smartphone className="h-3.5 w-3.5 text-emerald-600" />
-            WhatsApp reminders
-          </span>
-        </div>
-      </section>
-
-      {/* ── Problem Section ────────────────────────────────────────────────── */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">Sound familiar?</h2>
-            <p className="text-slate-500 text-lg">These are the real pains of running a CA practice today.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {PAIN_POINTS.map(({ icon: Icon, title, description }) => (
-              <div
-                key={title}
-                className="p-6 rounded-2xl border border-slate-200 bg-slate-50 hover:border-red-200 hover:bg-red-50/30 transition-colors group"
-              >
-                <div className="h-11 w-11 rounded-xl bg-red-100 flex items-center justify-center mb-4 group-hover:bg-red-200 transition-colors">
-                  <Icon className="h-5 w-5 text-red-600" />
-                </div>
-                <h3 className="font-semibold text-slate-900 mb-2 text-base">{title}</h3>
-                <p className="text-slate-500 text-sm leading-relaxed">{description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── How It Works ───────────────────────────────────────────────────── */}
-      <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-50 to-white">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">How it works</h2>
-            <p className="text-slate-500 text-lg">Up and running in under 10 minutes.</p>
-          </div>
-
-          <div className="flex flex-col gap-0">
-            {HOW_IT_WORKS.map(({ step, title, description }, i) => (
-              <div key={step} className="flex gap-6 items-start">
-                {/* Connector line */}
-                <div className="flex flex-col items-center shrink-0">
-                  <div className="h-12 w-12 rounded-full bg-blue-900 text-white flex items-center justify-center font-bold text-lg shadow-md">
-                    {step}
-                  </div>
-                  {i < HOW_IT_WORKS.length - 1 && (
-                    <div className="w-0.5 flex-1 bg-slate-200 my-2 min-h-[48px]" />
-                  )}
-                </div>
-                <div className="pb-10 pt-2">
-                  <h3 className="text-xl font-semibold text-slate-900 mb-2">{title}</h3>
-                  <p className="text-slate-500 leading-relaxed">{description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="text-center mt-4">
-            <Button
-              onClick={() => router.push('/signup?role=chartered_accountant')}
-              className="bg-blue-900 hover:bg-blue-800 text-white px-8"
-              size="lg"
-            >
-              Get started — it&apos;s free
-              <ChevronRight className="ml-1 h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Features ───────────────────────────────────────────────────────── */}
-      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">
-              Everything your CA practice needs
-            </h2>
-            <p className="text-slate-500 text-lg max-w-xl mx-auto">
-              Purpose-built for Indian chartered accountants managing multiple business clients.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {FEATURES.map(({ icon: Icon, color, title, description }) => (
-              <div
-                key={title}
-                className="p-6 rounded-2xl border border-slate-200 hover:border-blue-200 hover:shadow-md transition-all bg-white group"
-              >
-                <div className={`h-11 w-11 rounded-xl ${color} flex items-center justify-center mb-4`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h3 className="font-semibold text-slate-900 mb-2">{title}</h3>
-                <p className="text-slate-500 text-sm leading-relaxed">{description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Pricing Preview ────────────────────────────────────────────────── */}
-      <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">Simple, transparent pricing</h2>
-            <p className="text-slate-500 text-lg">
-              CA access is <span className="font-semibold text-blue-900">always free</span>. Business clients pay.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* CA Plan */}
-            <div className="bg-white rounded-2xl border-2 border-blue-900 shadow-lg p-8 relative">
-              <div className="absolute -top-3 left-6">
-                <Badge className="bg-blue-900 text-white text-xs px-3 py-0.5">For CAs</Badge>
-              </div>
-              <div className="flex items-end gap-2 mb-1 mt-2">
-                <span className="text-4xl font-extrabold text-slate-900">Free</span>
-                <span className="text-slate-500 mb-1">forever</span>
-              </div>
-              <p className="text-slate-500 text-sm mb-6">Everything you need to manage your full client portfolio.</p>
-              <ul className="space-y-3 mb-8">
-                {CA_FEATURES.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5 text-sm text-slate-700">
-                    <CheckCircle2 className="h-4 w-4 text-blue-900 shrink-0 mt-0.5" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Button
-                className="w-full bg-blue-900 hover:bg-blue-800 text-white"
-                onClick={() => router.push('/signup?role=chartered_accountant')}
-              >
-                Start Free as CA
-              </Button>
-            </div>
-
-            {/* Business Plan */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 relative">
-              <div className="absolute -top-3 left-6">
-                <Badge className="bg-slate-700 text-white text-xs px-3 py-0.5">For Businesses</Badge>
-              </div>
-              <div className="flex items-end gap-2 mb-1 mt-2">
-                <span className="text-4xl font-extrabold text-slate-900">₹999</span>
-                <span className="text-slate-500 mb-1">/ year</span>
-              </div>
-              <p className="text-slate-500 text-sm mb-6">Your CA invites you. Pay once, stay compliant all year.</p>
-              <ul className="space-y-3 mb-8">
-                {BUSINESS_FEATURES.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5 text-sm text-slate-700">
-                    <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Button
-                variant="outline"
-                className="w-full border-slate-300 text-slate-700 hover:bg-slate-50"
-                onClick={() => router.push('/signup')}
-              >
-                Sign Up as Business
-              </Button>
-            </div>
-          </div>
-
-          <p className="text-center text-sm text-slate-400 mt-6">
-            Your CA invites you — ask them about ComplianceHub today.
-          </p>
-        </div>
-      </section>
-
-      {/* ── Final CTA ──────────────────────────────────────────────────────── */}
-      <section className="bg-gradient-to-br from-blue-900 to-blue-800 text-white py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="flex justify-center mb-5">
-            <div className="h-14 w-14 rounded-2xl bg-blue-700/60 flex items-center justify-center">
-              <Zap className="h-7 w-7 text-white" />
-            </div>
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to stop chasing clients?</h2>
-          <p className="text-blue-200 text-lg mb-8 max-w-xl mx-auto">
-            Join CAs across Maharashtra who use ComplianceHub to run a tighter, more organised practice.
-          </p>
-          <Button
-            size="lg"
-            onClick={() => router.push('/signup?role=chartered_accountant')}
-            className="bg-white text-blue-900 hover:bg-blue-50 font-semibold px-10 h-12 shadow-lg"
-          >
-            Create your free CA account
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
-      </section>
-
-      {/* ── Footer ─────────────────────────────────────────────────────────── */}
-      <footer className="bg-slate-900 text-slate-400 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8">
+      {/* ── Stat Counters ── */}
+      <section className="bg-white/5 border-y border-white/10 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="h-7 w-7 rounded-md bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center">
-                  <FileCheck className="h-4 w-4 text-white" />
-                </div>
-                <span className="text-white font-semibold">ComplianceHub</span>
+              <div className="text-4xl font-extrabold text-white">
+                <AnimatedCounter target={70} suffix="M+" />
               </div>
-              <p className="text-sm max-w-xs leading-relaxed">
-                GST compliance management for chartered accountants and Indian businesses.
+              <p className="text-slate-400 mt-2 text-sm">Indian MSMEs struggling with compliance</p>
+            </div>
+            <div>
+              <div className="text-4xl font-extrabold text-white">
+                <AnimatedCounter target={998} suffix="" />
+              </div>
+              <p className="text-slate-400 mt-2 text-sm">Legal obligations per business per year</p>
+            </div>
+            <div>
+              <div className="text-4xl font-extrabold text-indigo-400">
+                ₹<AnimatedCounter target={15} suffix="L+" />
+              </div>
+              <p className="text-slate-400 mt-2 text-sm">Average compliance cost (fines + fees)</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── The Problem ── */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold text-white">Why compliance is broken for MSMEs</h2>
+          <p className="mt-3 text-slate-400">The three problems every small business owner faces</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            {
+              icon: AlertTriangle,
+              color: 'text-rose-400',
+              bg: 'bg-rose-500/10 border-rose-500/20',
+              title: 'Missed Deadlines → Penalties',
+              desc: 'GSTR-3B late by 1 day = ₹50/day penalty. Most MSMEs miss at least 4–6 filings per year because no one tracks them proactively.',
+            },
+            {
+              icon: FolderOpen,
+              color: 'text-amber-400',
+              bg: 'bg-amber-500/10 border-amber-500/20',
+              title: 'Lost Documents → Audit Risk',
+              desc: 'Invoices in WhatsApp, returns in email, certificates on a USB drive. When GST audit comes, nobody can find anything.',
+            },
+            {
+              icon: Clock,
+              color: 'text-purple-400',
+              bg: 'bg-purple-500/10 border-purple-500/20',
+              title: 'CA Overload → Errors',
+              desc: 'A single CA manages 50–200 clients. Without a system, critical tasks fall through the cracks — and you pay the price.',
+            },
+          ].map((item) => (
+            <div key={item.title} className={`p-6 rounded-xl border ${item.bg}`}>
+              <item.icon className={`w-8 h-8 ${item.color} mb-4`} />
+              <h3 className="text-lg font-bold text-white mb-2">{item.title}</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── 4 Pillars ── */}
+      <section id="features" className="py-20 bg-white/3 border-y border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-white">The 4 Pillars of ComplianceHub</h2>
+            <p className="mt-3 text-slate-400">Everything your CA needs. Everything you've been missing.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {[
+              {
+                icon: Calendar,
+                color: 'bg-indigo-500',
+                title: 'Unified Compliance Calendar',
+                desc: 'Auto-generated compliance schedule for your entity type — GSTR-1, GSTR-3B, TDS, PF/ESI, ROC filings — all in one place with smart deadline alerts.',
+                badge: 'All Plans',
+              },
+              {
+                icon: Bell,
+                color: 'bg-emerald-500',
+                title: 'WhatsApp Alerts',
+                desc: 'Get reminded 7 days and 1 day before every deadline directly on WhatsApp. No app to install. Works on your CA\'s number or your business number.',
+                badge: 'Pro & Enterprise',
+              },
+              {
+                icon: ShieldCheck,
+                color: 'bg-purple-500',
+                title: 'Document Vault',
+                desc: 'Secure, categorized cloud storage for all compliance documents — GST, PF-ESI, ROC, invoices. Full audit trail. One-click retrieval during GST audits.',
+                badge: 'All Plans',
+              },
+              {
+                icon: Users,
+                color: 'bg-amber-500',
+                title: 'CA Collaboration',
+                desc: 'CAs manage all clients from one dashboard. Real-time status updates, document requests, penalty estimates, and compliance health scores per client.',
+                badge: 'Free for CAs',
+              },
+            ].map((pillar) => (
+              <div key={pillar.title} className="flex gap-4 p-6 bg-white/5 border border-white/10 rounded-xl hover:bg-white/8 transition-colors">
+                <div className={`w-12 h-12 ${pillar.color} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                  <pillar.icon className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-lg font-bold text-white">{pillar.title}</h3>
+                    <span className="text-xs px-2 py-0.5 bg-indigo-500/20 text-indigo-300 rounded-full border border-indigo-500/30">
+                      {pillar.badge}
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-sm leading-relaxed">{pillar.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── How It Works ── */}
+      <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold text-white">How It Works</h2>
+          <p className="mt-3 text-slate-400">From signup to full compliance in under 5 minutes</p>
+        </div>
+
+        <div className="relative">
+          {/* Connecting line */}
+          <div className="hidden md:block absolute top-8 left-1/6 right-1/6 h-0.5 bg-gradient-to-r from-indigo-500 to-purple-500" />
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                step: '01',
+                icon: CheckCircle,
+                title: 'CA Signs Up Free',
+                desc: 'Create your CA account in 60 seconds. No credit card. No setup fee. Full access to the CA dashboard forever.',
+              },
+              {
+                step: '02',
+                icon: Users,
+                title: 'Invite Your Clients',
+                desc: 'Share a unique invite link with each client. They sign up as business owners and you\'re automatically linked.',
+              },
+              {
+                step: '03',
+                icon: TrendingUp,
+                title: 'Dashboard Auto-Fills',
+                desc: 'Based on entity type (Pvt Ltd, LLP, Proprietorship), the compliance calendar auto-populates with all due dates.',
+              },
+            ].map((step, i) => (
+              <div key={step.step} className="relative text-center">
+                <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/30">
+                  <step.icon className="w-8 h-8 text-white" />
+                </div>
+                <div className="absolute -top-2 -right-2 w-6 h-6 bg-slate-800 border border-indigo-500/50 rounded-full flex items-center justify-center">
+                  <span className="text-xs font-bold text-indigo-400">{i + 1}</span>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">{step.title}</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Compliance Calendar Preview ── */}
+      <section className="py-16 bg-white/3 border-y border-white/10">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-white">Your Compliance Calendar, Pre-Built</h2>
+            <p className="mt-2 text-slate-400 text-sm">Every deadline, every month — automatically tracked</p>
+          </div>
+
+          <div className="overflow-x-auto rounded-xl border border-white/10">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-white/5 border-b border-white/10">
+                  <th className="text-left px-4 py-3 text-slate-300 font-semibold">Filing</th>
+                  <th className="text-left px-4 py-3 text-slate-300 font-semibold">Due Date</th>
+                  <th className="text-left px-4 py-3 text-slate-300 font-semibold">Frequency</th>
+                  <th className="text-left px-4 py-3 text-slate-300 font-semibold">Applicable To</th>
+                  <th className="text-left px-4 py-3 text-slate-300 font-semibold">Penalty</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {[
+                  { filing: 'GSTR-1', due: '11th of next month', freq: 'Monthly', applicable: 'GST registered', penalty: '₹50/day, max ₹2,000' },
+                  { filing: 'GSTR-3B', due: '20th of next month', freq: 'Monthly', applicable: 'GST registered', penalty: '₹50/day, max ₹2,000' },
+                  { filing: 'PF/ESI', due: '15th of next month', freq: 'Monthly', applicable: 'Employers (10+ staff)', penalty: '₹5/day per employee' },
+                  { filing: 'TDS Payment', due: '7th of next month', freq: 'Monthly', applicable: 'TDS deductors', penalty: '1.5%/month interest' },
+                  { filing: 'TDS Return (Q)', due: '31st after quarter', freq: 'Quarterly', applicable: 'TDS deductors', penalty: '₹200/day' },
+                  { filing: 'ITR Filing', due: 'July 31', freq: 'Annual', applicable: 'All businesses', penalty: '₹5,000 late fee' },
+                  { filing: 'GSTR-9 Annual', due: 'December 31', freq: 'Annual', applicable: 'GST registered', penalty: '₹200/day' },
+                  { filing: 'DIR-3 KYC', due: 'September 30', freq: 'Annual', applicable: 'LLP/Pvt Ltd directors', penalty: '₹5,000 default' },
+                ].map((row, i) => (
+                  <tr key={i} className="hover:bg-white/5 transition-colors">
+                    <td className="px-4 py-3 text-white font-medium">{row.filing}</td>
+                    <td className="px-4 py-3 text-indigo-300">{row.due}</td>
+                    <td className="px-4 py-3 text-slate-400">{row.freq}</td>
+                    <td className="px-4 py-3 text-slate-400">{row.applicable}</td>
+                    <td className="px-4 py-3 text-rose-400 text-xs">{row.penalty}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-center text-xs text-slate-500 mt-4">
+            + 20 more filings automatically tracked for LLP, Private Limited, and other entity types
+          </p>
+        </div>
+      </section>
+
+      {/* ── Pricing Preview ── */}
+      <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold text-white">Simple, Transparent Pricing</h2>
+          <p className="mt-3 text-slate-400">CAs are always free. Businesses pay only for what they need.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          {/* Free */}
+          <div className="p-6 bg-white/5 border border-white/10 rounded-xl">
+            <div className="mb-4">
+              <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Free — CAs Only</p>
+              <div className="mt-2 flex items-end gap-1">
+                <span className="text-4xl font-extrabold text-white">₹0</span>
+                <span className="text-slate-400 mb-1">/forever</span>
+              </div>
+            </div>
+            <ul className="space-y-2 mb-6">
+              {['Unlimited client dashboard', 'Compliance calendar', 'Document review', 'CA invite link', '5 doc uploads/month (client)'].map(f => (
+                <li key={f} className="flex items-center gap-2 text-sm text-slate-300">
+                  <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <a href="/signup?role=chartered_accountant" className="block text-center px-4 py-2.5 border border-white/20 text-white text-sm font-semibold rounded-lg hover:bg-white/10 transition-colors">
+              Start Free as CA
+            </a>
+          </div>
+
+          {/* Pro */}
+          <div className="p-6 bg-indigo-600 border-2 border-indigo-400 rounded-xl shadow-2xl shadow-indigo-500/30 relative">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-amber-400 text-amber-900 text-xs font-bold rounded-full">
+              Most Popular
+            </div>
+            <div className="mb-4">
+              <p className="text-xs text-indigo-200 uppercase tracking-wider font-semibold">Pro</p>
+              <div className="mt-2 flex items-end gap-1">
+                <span className="text-4xl font-extrabold text-white">₹999</span>
+                <span className="text-indigo-200 mb-1">/year</span>
+              </div>
+            </div>
+            <ul className="space-y-2 mb-6">
+              {['All Free features', 'WhatsApp/SMS alerts', '2GB document vault', '15+ tasks/year (full calendar)', 'Priority CA handling', 'PDF export reports'].map(f => (
+                <li key={f} className="flex items-center gap-2 text-sm text-indigo-100">
+                  <CheckCircle className="w-4 h-4 text-indigo-200 flex-shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <a href="/signup?role=business_owner" className="block text-center px-4 py-2.5 bg-white text-indigo-700 text-sm font-bold rounded-lg hover:bg-indigo-50 transition-colors">
+              Get Started
+            </a>
+          </div>
+
+          {/* Enterprise */}
+          <div className="p-6 bg-white/5 border border-white/10 rounded-xl">
+            <div className="mb-4">
+              <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Enterprise</p>
+              <div className="mt-2 flex items-end gap-1">
+                <span className="text-4xl font-extrabold text-white">₹2,999</span>
+                <span className="text-slate-400 mb-1">/year</span>
+              </div>
+            </div>
+            <ul className="space-y-2 mb-6">
+              {['All Pro features', '10GB document vault', 'Multi-CA support', 'Custom filing schedules', 'Priority support', 'Advanced analytics'].map(f => (
+                <li key={f} className="flex items-center gap-2 text-sm text-slate-300">
+                  <CheckCircle className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <a href="/pricing" className="block text-center px-4 py-2.5 border border-white/20 text-white text-sm font-semibold rounded-lg hover:bg-white/10 transition-colors">
+              Contact Sales
+            </a>
+          </div>
+        </div>
+
+        <div className="text-center mt-6">
+          <a href="/pricing" className="text-indigo-400 text-sm hover:text-indigo-300 transition-colors">
+            View full feature comparison →
+          </a>
+        </div>
+      </section>
+
+      {/* ── Footer ── */}
+      <footer className="bg-[#080F1E] border-t border-white/10 py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+            {/* Brand */}
+            <div className="md:col-span-1">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                  <FileCheck className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-lg font-bold text-white">ComplianceHub</span>
+              </div>
+              <p className="text-slate-500 text-sm leading-relaxed">
+                Made for Indian MSMEs. Built with ❤ for the 70 million small businesses that keep India running.
               </p>
             </div>
-            <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-              <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
-              <a
-                href="#features"
-                className="hover:text-white transition-colors"
-              >
-                Features
-              </a>
-              <button
-                onClick={() => router.push('/login')}
-                className="hover:text-white transition-colors"
-              >
-                Login
-              </button>
-              <button
-                onClick={() => router.push('/signup')}
-                className="hover:text-white transition-colors"
-              >
-                Sign Up
-              </button>
-              <a href="mailto:support@compliancehub.in" className="hover:text-white transition-colors">
-                Contact
-              </a>
-            </nav>
+
+            {/* Product */}
+            <div>
+              <h4 className="text-sm font-semibold text-white mb-4">Product</h4>
+              <ul className="space-y-2">
+                {['Features', 'Pricing', 'How It Works', 'Compliance Calendar'].map(link => (
+                  <li key={link}>
+                    <a href="#" className="text-sm text-slate-500 hover:text-slate-300 transition-colors">{link}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* For Users */}
+            <div>
+              <h4 className="text-sm font-semibold text-white mb-4">For Users</h4>
+              <ul className="space-y-2">
+                {[
+                  { label: 'Sign Up as CA', href: '/signup?role=chartered_accountant' },
+                  { label: 'Sign Up as Business', href: '/signup?role=business_owner' },
+                  { label: 'Log In', href: '/login' },
+                ].map(link => (
+                  <li key={link.label}>
+                    <a href={link.href} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">{link.label}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="text-sm font-semibold text-white mb-4">Legal</h4>
+              <ul className="space-y-2">
+                {['Privacy Policy', 'Terms of Service', 'Refund Policy'].map(link => (
+                  <li key={link}>
+                    <a href="#" className="text-sm text-slate-500 hover:text-slate-300 transition-colors">{link}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-          <div className="border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-            <p>© {new Date().getFullYear()} ComplianceHub. All rights reserved.</p>
-            <p>Made for Indian CAs · Powered by Supabase &amp; Razorpay</p>
+
+          <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-slate-500 text-sm">© 2026 ComplianceHub. All rights reserved.</p>
+            <p className="text-slate-500 text-sm">Made for Indian MSMEs 🇮🇳</p>
           </div>
         </div>
       </footer>

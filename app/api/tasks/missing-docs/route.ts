@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
   }
 
   // 2. Fetch businesses
-  const businessIds = [...new Set(tasks.map((t) => t.business_id))];
+  const businessIds = Array.from(new Set(tasks.map((t) => t.business_id)));
   const { data: businesses, error: bizError } = await supabaseAdmin
     .from('businesses')
     .select('id, business_name, owner_id')
@@ -58,11 +58,11 @@ export async function GET(request: NextRequest) {
     .in('business_id', businessIds)
     .eq('status', 'active');
 
-  const caIds = [...new Set((relationships ?? []).map((r: any) => r.ca_profile_id))];
+  const caIds = Array.from(new Set((relationships ?? []).map((r: any) => r.ca_profile_id)));
 
   // 4. Fetch owner + CA profiles together
-  const ownerIds = [...new Set((businesses ?? []).map((b: any) => b.owner_id))];
-  const allProfileIds = [...new Set([...ownerIds, ...caIds])];
+  const ownerIds = Array.from(new Set((businesses ?? []).map((b: any) => b.owner_id)));
+  const allProfileIds = Array.from(new Set([...ownerIds, ...caIds]));
 
   const { data: profiles, error: profileError } = await supabaseAdmin
     .from('profiles')

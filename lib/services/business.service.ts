@@ -45,6 +45,6 @@ export const businessService = {
       entity_id: entityId,
       action,
       description: sanitizeText(description),
-    }).then(() => {}).catch(() => {});
+    }).then(() => {}, () => {});
   }
 };

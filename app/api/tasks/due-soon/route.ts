@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
   }
 
   // 2. Fetch businesses for those tasks
-  const businessIds = [...new Set(tasks.map((t) => t.business_id))];
+  const businessIds = Array.from(new Set(tasks.map((t) => t.business_id)));
   const { data: businesses, error: bizError } = await supabaseAdmin
     .from('businesses')
     .select('id, business_name, owner_id')
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
   }
 
   // 3. Fetch owner profiles (phone + name + email)
-  const ownerIds = [...new Set((businesses ?? []).map((b: any) => b.owner_id))];
+  const ownerIds = Array.from(new Set((businesses ?? []).map((b: any) => b.owner_id)));
   const { data: profiles, error: profileError } = await supabaseAdmin
     .from('profiles')
     .select('id, full_name, email, phone')

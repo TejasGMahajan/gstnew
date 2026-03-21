@@ -1,28 +1,21 @@
-import './globals.css';
 import type { Metadata } from 'next';
-import { AuthProvider } from '@/contexts/AuthContext';
+import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import ErrorBoundary from '@/components/shared/ErrorBoundary';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 export const metadata: Metadata = {
-  title: 'ComplianceHub - Tax & Regulatory Compliance for MSMEs',
-  description: 'Manage your tax and regulatory compliance with ease. Built for Indian MSMEs.',
+  title: 'ComplianceHub — GST & ROC for Indian MSMEs',
+  description: 'India\'s most trusted compliance management platform for chartered accountants and business owners.',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <ErrorBoundary>
-          <AuthProvider>
-            {children}
-            <Toaster />
-          </AuthProvider>
-        </ErrorBoundary>
+        <AuthProvider>
+          {children}
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

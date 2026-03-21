@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const access = await checkFeatureAccess(businessId, 'whatsapp_alerts');
+    const access = await checkFeatureAccess(businessId, 'whatsapp_reminders');
     if (!access.allowed) {
       return NextResponse.json(
         { success: false, error: access.reason, plan: access.plan },

@@ -1,160 +1,178 @@
+// FILE: app/login/page.tsx
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileCheck, CircleAlert as AlertCircle } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useToast } from '@/hooks/use-toast';
-
-// NOTE FOR DEVELOPER: Go to Supabase Dashboard > Authentication > Settings > Email Auth
-// and DISABLE "Confirm email" for faster testing. Re-enable before production launch.
-// Alternatively add your test email to the "Allow list" in Supabase Auth settings.
+import { FileCheck, Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
     setEmailNotConfirmed(false);
+    setLoading(true);
 
     try {
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
-      if (authError) {
-        if (authError.message.toLowerCase().includes('email not confirmed')) {
+      if (signInError) {
+        const msg = signInError.message.toLowerCase();
+        if (msg.includes('email not confirmed') || msg.includes('email_not_confirmed')) {
           setEmailNotConfirmed(true);
-          setError('Please check your email inbox and confirm your email address before logging in. Check your spam folder too.');
+          setError('Your email address has not been confirmed. Please check your inbox.');
+        } else if (msg.includes('invalid login credentials') || msg.includes('invalid credentials')) {
+          setError('Invalid email or password. Please try again.');
         } else {
-          setError(authError.message);
+          setError(signInError.message);
         }
         return;
       }
 
-      toast({ title: 'Welcome back!', description: 'Login successful.' });
-      router.push('/dashboard');
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : typeof err === 'string' ? err : 'An error occurred during login');
+      if (data.user) {
+        router.push('/dashboard');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResendConfirmation = async () => {
+  const handleResend = async () => {
     setResendLoading(true);
     try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email });
-      if (error) throw error;
-      toast({ title: 'Email sent!', description: 'Check your inbox (and spam folder) for the confirmation link.' });
-    } catch (err: unknown) {
-      toast({ title: 'Failed to resend', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+      const { error: resendError } = await supabase.auth.resend({ type: 'signup', email });
+      if (resendError) {
+        setError(resendError.message);
+      } else {
+        setResendSuccess(true);
+        setError('');
+      }
     } finally {
       setResendLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-      <Card className="w-full max-w-md shadow-xl border-slate-200">
-        <CardHeader className="space-y-3 text-center pb-8">
-          <div className="flex justify-center mb-2">
-            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center">
-              <FileCheck className="h-8 w-8 text-white" />
-            </div>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-600 rounded-xl mb-4">
+            <FileCheck className="w-7 h-7 text-white" />
           </div>
-          <CardTitle className="text-3xl font-bold text-slate-900">
-            Welcome Back
-          </CardTitle>
-          <CardDescription className="text-base text-slate-600">
-            Sign in to your compliance dashboard
-          </CardDescription>
-        </CardHeader>
+          <h1 className="text-2xl font-bold text-slate-900">ComplianceHub</h1>
+          <p className="text-slate-500 text-sm mt-1">Sign in to your account</p>
+        </div>
 
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-6">
+        {/* Card */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+          <form onSubmit={handleLogin} className="space-y-5">
+            {/* Error Message */}
             {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            {emailNotConfirmed && (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full border-blue-300 text-blue-900 hover:bg-blue-50"
-                onClick={handleResendConfirmation}
-                disabled={resendLoading || !email}
-              >
-                {resendLoading ? 'Sending...' : 'Resend confirmation email'}
-              </Button>
+              <div className="flex items-start gap-3 p-4 bg-rose-50 border border-rose-200 rounded-xl">
+                <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm text-rose-700">{error}</p>
+                  {emailNotConfirmed && !resendSuccess && (
+                    <button
+                      type="button"
+                      onClick={handleResend}
+                      disabled={resendLoading}
+                      className="mt-2 text-xs font-semibold text-rose-700 underline hover:text-rose-800 disabled:opacity-50"
+                    >
+                      {resendLoading ? 'Sending...' : 'Resend confirmation email'}
+                    </button>
+                  )}
+                </div>
+              </div>
             )}
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-900">
-                  Email Address
-                </Label>
-                <Input
-                  id="email"
+            {/* Resend success */}
+            {resendSuccess && (
+              <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <p className="text-sm text-emerald-700">Confirmation email sent! Please check your inbox.</p>
+              </div>
+            )}
+
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Email address</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder="you@example.com"
-                  className="border-slate-300 focus:border-blue-900"
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-slate-900">
-                  Password
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  placeholder="Enter your password"
-                  className="border-slate-300 focus:border-blue-900"
+                  placeholder="••••••••"
+                  className="w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
-            <Button
+            {/* Submit */}
+            <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white h-12 text-base font-semibold shadow-lg"
+              className="w-full py-2.5 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed text-sm"
             >
-              {loading ? 'Signing In...' : 'Sign In'}
-            </Button>
-
-            <div className="text-center text-sm text-slate-600">
-              Don't have an account?{' '}
-              <a href="/signup" className="text-blue-900 hover:underline font-semibold">
-                Sign Up
-              </a>
-            </div>
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Signing in...
+                </span>
+              ) : 'Sign In'}
+            </button>
           </form>
-        </CardContent>
-      </Card>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-slate-500">
+              Don't have an account?{' '}
+              <a href="/signup" className="text-indigo-600 font-semibold hover:text-indigo-700">
+                Sign up free
+              </a>
+            </p>
+          </div>
+        </div>
+
+        <p className="text-center text-xs text-slate-400 mt-6">
+          ComplianceHub — GST & Compliance for Indian MSMEs
+        </p>
+      </div>
     </div>
   );
 }

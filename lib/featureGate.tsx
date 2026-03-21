@@ -1,293 +1,187 @@
+// FILE: lib/featureGate.tsx
 'use client';
 
-/**
- * Feature gating — plan-based access control.
- *
- * Exports:
- *   checkFeatureAccess(businessId, feature) — async, usable anywhere
- *   useFeatureAccess(feature)               — React hook (auto-resolves businessId)
- *   <UpgradePrompt feature="..." />         — dismissible upgrade banner
- */
+import React from 'react';
+import { Lock } from 'lucide-react';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { X, Lock, ArrowRight } from 'lucide-react';
-import { supabase } from '@/lib/supabase/client';
+// ─── PLAN LIMITS ────────────────────────────────────────────────────────────
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+export const FREE_LIMITS = {
+  docs_per_month: 5,
+  tasks_visible: 3,
+  whatsapp: false,
+  export: false,
+  storage_mb: 100,
+} as const;
+
+export const PRO_LIMITS = {
+  docs_per_month: Infinity,
+  tasks_visible: Infinity,
+  whatsapp: true,
+  export: true,
+  storage_mb: 2048,
+} as const;
+
+export const ENTERPRISE_LIMITS = {
+  docs_per_month: Infinity,
+  tasks_visible: Infinity,
+  whatsapp: true,
+  export: true,
+  storage_mb: 10240,
+} as const;
 
 export type PlanType = 'free' | 'pro' | 'enterprise';
-
-export type Feature =
-  | 'upload_document'
+export type FeatureKey =
+  | 'whatsapp_reminders'
   | 'export_report'
-  | 'whatsapp_alerts'
-  | 'full_task_list'
-  | 'priority_handling';
+  | 'document_upload'
+  | 'full_task_calendar'
+  | 'priority_ca'
+  | 'multi_ca';
 
-export interface FeatureAccessResult {
-  allowed: boolean;
-  reason:  string;
-  plan:    string;
-}
+// ─── FEATURE → PLAN REQUIREMENTS ────────────────────────────────────────────
 
-// ─── Feature rules ────────────────────────────────────────────────────────────
-
-/** Minimum plan required to use a feature without any restriction. */
-const PLAN_REQUIRED: Record<Feature, PlanType> = {
-  upload_document:  'free',        // free has a monthly cap — see quota check below
-  export_report:    'pro',
-  whatsapp_alerts:  'pro',
-  full_task_list:   'pro',         // free gets a 3-task cap
-  priority_handling:'pro',
+const FEATURE_PLAN_MAP: Record<FeatureKey, PlanType[]> = {
+  whatsapp_reminders: ['pro', 'enterprise'],
+  export_report: ['pro', 'enterprise'],
+  document_upload: ['free', 'pro', 'enterprise'], // allowed on all plans but has monthly limit on free
+  full_task_calendar: ['pro', 'enterprise'],
+  priority_ca: ['pro', 'enterprise'],
+  multi_ca: ['enterprise'],
 };
 
-/** Human-readable feature names used in messages and the upgrade prompt. */
-const FEATURE_LABELS: Record<Feature, string> = {
-  upload_document:  'Document Uploads',
-  export_report:    'Report Export',
-  whatsapp_alerts:  'WhatsApp Alerts',
-  full_task_list:   'Full Task List',
-  priority_handling:'Priority Handling',
-};
+// ─── getBusinessPlan ─────────────────────────────────────────────────────────
 
-const FREE_UPLOAD_LIMIT = 5;   // per calendar month
-const FREE_TASK_LIMIT   = 3;   // max tasks shown
-
-// ─── Internal helpers ─────────────────────────────────────────────────────────
-
-async function getActivePlan(businessId: string): Promise<PlanType> {
-  const { data } = await supabase
+export async function getBusinessPlan(businessId: string): Promise<PlanType> {
+  const { data, error } = await supabaseAdmin
     .from('subscriptions')
-    .select('plan_type')
+    .select('plan_type, status')
     .eq('business_id', businessId)
     .eq('status', 'active')
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
-  const plan = data?.plan_type as PlanType | undefined;
-  return plan && ['free', 'pro', 'enterprise'].includes(plan) ? plan : 'free';
+  if (error || !data) return 'free';
+
+  const plan = data.plan_type as string;
+  if (plan === 'enterprise') return 'enterprise';
+  if (plan === 'pro') return 'pro';
+  return 'free';
 }
 
-/** Count documents this business uploaded in the current calendar month. */
-async function getMonthlyUploadCount(businessId: string): Promise<number> {
-  const start = new Date();
-  start.setDate(1);
-  start.setHours(0, 0, 0, 0);
+// ─── checkFeatureAccess ──────────────────────────────────────────────────────
 
-  const { count, error } = await supabase
+export async function checkFeatureAccess(
+  businessId: string,
+  feature: FeatureKey
+): Promise<{ allowed: boolean; plan: PlanType; reason?: string }> {
+  const plan = await getBusinessPlan(businessId);
+  const allowedPlans = FEATURE_PLAN_MAP[feature];
+
+  if (!allowedPlans.includes(plan)) {
+    return {
+      allowed: false,
+      plan,
+      reason: `Feature '${feature}' requires ${allowedPlans.join(' or ')} plan. Current plan: ${plan}.`,
+    };
+  }
+
+  // Extra check for document_upload: enforce monthly limit on free plan
+  if (feature === 'document_upload' && plan === 'free') {
+    const limitCheck = await checkDocumentUploadLimit(businessId);
+    if (!limitCheck.allowed) {
+      return {
+        allowed: false,
+        plan,
+        reason: `Free plan allows ${FREE_LIMITS.docs_per_month} uploads/month. You've used ${limitCheck.used}.`,
+      };
+    }
+  }
+
+  return { allowed: true, plan };
+}
+
+// ─── checkDocumentUploadLimit ────────────────────────────────────────────────
+
+export async function checkDocumentUploadLimit(
+  businessId: string
+): Promise<{ allowed: boolean; used: number; limit: number }> {
+  const plan = await getBusinessPlan(businessId);
+
+  if (plan !== 'free') {
+    return { allowed: true, used: 0, limit: Infinity };
+  }
+
+  const now = new Date();
+  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+  const { count, error } = await supabaseAdmin
     .from('documents')
     .select('id', { count: 'exact', head: true })
     .eq('business_id', businessId)
-    .gte('uploaded_at', start.toISOString());
+    .gte('uploaded_at', firstOfMonth);
 
-  if (error) return 0; // fail open — don't block uploads on a count error
-  return count ?? 0;
-}
-
-function planLabel(plan: PlanType): string {
-  return plan.charAt(0).toUpperCase() + plan.slice(1);
-}
-
-// ─── checkFeatureAccess ───────────────────────────────────────────────────────
-
-/**
- * Check whether a business is allowed to use a feature.
- *
- * @example
- *   const { allowed, reason, plan } = await checkFeatureAccess(businessId, 'export_report');
- *   if (!allowed) showUpgrade(reason);
- */
-export async function checkFeatureAccess(
-  businessId: string,
-  feature: Feature | string,
-): Promise<FeatureAccessResult> {
-  // Unknown feature — fail open to avoid blocking accidental typos in dev
-  if (!PLAN_REQUIRED[feature as Feature]) {
-    return { allowed: true, reason: '', plan: 'free' };
+  if (error) {
+    // Fail open — don't block upload if we can't count
+    return { allowed: true, used: 0, limit: FREE_LIMITS.docs_per_month };
   }
 
-  const f    = feature as Feature;
-  const plan = await getActivePlan(businessId);
-  const isPaid = plan === 'pro' || plan === 'enterprise';
-
-  // ── upload_document: free plan has a 5/month cap ─────────────────────────
-  if (f === 'upload_document') {
-    if (isPaid) return { allowed: true, reason: '', plan };
-
-    const used = await getMonthlyUploadCount(businessId);
-    if (used >= FREE_UPLOAD_LIMIT) {
-      return {
-        allowed: false,
-        reason:  `Free plan allows ${FREE_UPLOAD_LIMIT} document uploads per month. You have used ${used}/${FREE_UPLOAD_LIMIT}. Upgrade to Pro for unlimited uploads.`,
-        plan,
-      };
-    }
-    return {
-      allowed: true,
-      reason:  `${FREE_UPLOAD_LIMIT - used} of ${FREE_UPLOAD_LIMIT} free uploads remaining this month.`,
-      plan,
-    };
-  }
-
-  // ── full_task_list: free plan sees only 3 tasks ───────────────────────────
-  if (f === 'full_task_list') {
-    if (isPaid) return { allowed: true, reason: '', plan };
-    return {
-      allowed: false,
-      reason:  `Free plan displays up to ${FREE_TASK_LIMIT} tasks. Upgrade to Pro to see your full task list.`,
-      plan,
-    };
-  }
-
-  // ── All other features: simple plan tier check ────────────────────────────
-  const required = PLAN_REQUIRED[f];
-  if (plan === 'enterprise') return { allowed: true, reason: '', plan };
-  if (plan === 'pro' && required !== 'enterprise') return { allowed: true, reason: '', plan };
+  const used = count ?? 0;
+  const limit = FREE_LIMITS.docs_per_month;
 
   return {
-    allowed: false,
-    reason:  `${FEATURE_LABELS[f]} is available on the ${planLabel(required)} plan and above. You are currently on the ${planLabel(plan)} plan.`,
-    plan,
+    allowed: used < limit,
+    used,
+    limit,
   };
 }
 
-// ─── useFeatureAccess hook ────────────────────────────────────────────────────
-
-export interface UseFeatureAccessResult {
-  allowed:     boolean;
-  loading:     boolean;
-  plan:        string;
-  showUpgrade: boolean;
-}
-
-/**
- * React hook — resolves the current user's business automatically.
- *
- * @example
- *   const { allowed, loading, showUpgrade } = useFeatureAccess('export_report');
- */
-export function useFeatureAccess(feature: Feature | string): UseFeatureAccessResult {
-  const [state, setState] = useState<UseFeatureAccessResult>({
-    allowed:     false,
-    loading:     true,
-    plan:        'free',
-    showUpgrade: false,
-  });
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function run() {
-      try {
-        // 1. Get current user
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          if (!cancelled) setState({ allowed: false, loading: false, plan: 'free', showUpgrade: true });
-          return;
-        }
-
-        // 2. Resolve their business (first active business linked to this user)
-        const { data: business } = await supabase
-          .from('businesses')
-          .select('id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (!business) {
-          // No business yet — fail open so onboarding isn't blocked
-          if (!cancelled) setState({ allowed: true, loading: false, plan: 'free', showUpgrade: false });
-          return;
-        }
-
-        // 3. Check feature
-        const result = await checkFeatureAccess(business.id, feature);
-        if (!cancelled) {
-          setState({
-            allowed:     result.allowed,
-            loading:     false,
-            plan:        result.plan,
-            showUpgrade: !result.allowed,
-          });
-        }
-      } catch {
-        // On any unexpected error, fail open — don't block the UI
-        if (!cancelled) setState({ allowed: true, loading: false, plan: 'free', showUpgrade: false });
-      }
-    }
-
-    run();
-    return () => { cancelled = true; };
-  }, [feature]);
-
-  return state;
-}
-
-// ─── UpgradePrompt component ──────────────────────────────────────────────────
+// ─── UpgradePrompt component ─────────────────────────────────────────────────
 
 interface UpgradePromptProps {
-  feature: Feature | string;
-  /** Optional override message. Defaults to the reason from checkFeatureAccess. */
-  message?: string;
-  className?: string;
+  featureName?: string;
+  compact?: boolean;
 }
 
-const MIN_PLAN_LABEL: Record<Feature, string> = {
-  upload_document:  'Pro',
-  export_report:    'Pro',
-  whatsapp_alerts:  'Pro',
-  full_task_list:   'Pro',
-  priority_handling:'Pro',
-};
-
-/**
- * Dismissible upgrade banner shown when a feature is gated.
- *
- * @example
- *   const { showUpgrade } = useFeatureAccess('export_report');
- *   {showUpgrade && <UpgradePrompt feature="export_report" />}
- */
-export function UpgradePrompt({ feature, message, className = '' }: UpgradePromptProps) {
-  const [dismissed, setDismissed] = useState(false);
-
-  if (dismissed) return null;
-
-  const featureLabel = FEATURE_LABELS[feature as Feature] ?? feature;
-  const planNeeded   = MIN_PLAN_LABEL[feature as Feature] ?? 'Pro';
-  const displayMsg   = message ?? `${featureLabel} requires the ${planNeeded} plan.`;
+export function UpgradePrompt({ featureName, compact = false }: UpgradePromptProps) {
+  if (compact) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+        <Lock className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+        <span className="text-amber-800 text-xs">
+          {featureName ? `${featureName} requires Pro` : 'Upgrade to Pro'}
+        </span>
+        <a
+          href="/pricing"
+          className="ml-auto text-xs font-semibold text-indigo-600 hover:text-indigo-700 whitespace-nowrap"
+        >
+          Upgrade →
+        </a>
+      </div>
+    );
+  }
 
   return (
-    <div
-      role="alert"
-      className={`relative flex items-start gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900 shadow-sm ${className}`}
-    >
-      {/* Icon */}
-      <Lock className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" aria-hidden />
-
-      {/* Body */}
-      <div className="flex-1">
-        <p className="font-semibold leading-snug">
-          Upgrade to {planNeeded} to unlock {featureLabel}
-        </p>
-        <p className="mt-0.5 text-indigo-700">{displayMsg}</p>
-
-        <Link
-          href="/pricing"
-          className="mt-2 inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1"
-        >
-          Upgrade Now
-          <ArrowRight className="h-3 w-3" />
-        </Link>
+    <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
+      <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+        <Lock className="w-4 h-4 text-amber-600" />
       </div>
-
-      {/* Dismiss */}
-      <button
-        type="button"
-        onClick={() => setDismissed(true)}
-        aria-label="Dismiss"
-        className="shrink-0 rounded p-0.5 text-indigo-400 transition-colors hover:bg-indigo-100 hover:text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-amber-900">
+          {featureName ? `${featureName} is a Pro feature` : 'This feature requires Pro'}
+        </p>
+        <p className="text-xs text-amber-700 mt-0.5">
+          Upgrade to unlock unlimited access, WhatsApp alerts, PDF exports, and more.
+        </p>
+      </div>
+      <a
+        href="/pricing"
+        className="flex-shrink-0 px-4 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
       >
-        <X className="h-4 w-4" />
-      </button>
+        Upgrade to Pro
+      </a>
     </div>
   );
 }

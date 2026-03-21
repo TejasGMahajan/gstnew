@@ -1,16 +1,16 @@
+// FILE: app/pricing/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { FileCheck, Check, Zap, Users, Shield, Bell, HardDrive, TrendingUp, LogOut } from 'lucide-react';
-import Script from 'next/script';
-import { useToast } from '@/hooks/use-toast';
-import LoadingSpinner from '@/components/shared/LoadingSpinner';
+import { supabase } from '@/lib/supabase/client';
+import { CheckCircle, X, FileCheck, ArrowLeft, Star } from 'lucide-react';
+
+interface SubscriptionData {
+  plan_type: string;
+  business_id: string;
+}
 
 declare global {
   interface Window {
@@ -18,545 +18,381 @@ declare global {
   }
 }
 
-interface Plan {
-  id: string;
-  name: string;
-  price_annual: number;
-  price_quarterly: number;
-  features: string[];
-  popular?: boolean;
-  suitable_for: string;
+const PLANS = [
+  {
+    key: 'free',
+    name: 'Free',
+    subtitle: 'CAs only — forever',
+    price: '₹0',
+    period: '/forever',
+    popular: false,
+    color: 'border-slate-200',
+    btnClass: 'border border-slate-300 text-slate-700 hover:bg-slate-50',
+    features: [
+      { label: 'Unlimited client dashboard', included: true },
+      { label: 'Compliance calendar', included: true },
+      { label: 'Document review', included: true },
+      { label: 'CA invite link', included: true },
+      { label: '5 doc uploads/month (business)', included: true },
+      { label: 'WhatsApp/SMS alerts', included: false },
+      { label: 'Document vault (full)', included: false },
+      { label: 'Full task calendar (15+/year)', included: false },
+      { label: 'Priority CA handling', included: false },
+      { label: 'PDF export reports', included: false },
+    ],
+    razorpayAmount: null,
+  },
+  {
+    key: 'pro',
+    name: 'Pro',
+    subtitle: 'For growing businesses',
+    price: '₹999',
+    period: '/year',
+    popular: true,
+    color: 'border-indigo-500 shadow-2xl shadow-indigo-100',
+    btnClass: 'bg-indigo-600 text-white hover:bg-indigo-700',
+    features: [
+      { label: 'All Free features', included: true },
+      { label: 'WhatsApp/SMS alerts', included: true },
+      { label: '2GB document vault', included: true },
+      { label: 'Full task calendar (15+/year)', included: true },
+      { label: 'Priority CA handling', included: true },
+      { label: 'PDF export reports', included: true },
+      { label: 'Multi-CA support', included: false },
+      { label: 'Custom filing schedules', included: false },
+      { label: '10GB vault', included: false },
+    ],
+    razorpayAmount: 99900, // in paise
+  },
+  {
+    key: 'enterprise',
+    name: 'Enterprise',
+    subtitle: 'For large businesses',
+    price: '₹2,999',
+    period: '/year',
+    popular: false,
+    color: 'border-purple-200',
+    btnClass: 'bg-purple-600 text-white hover:bg-purple-700',
+    features: [
+      { label: 'All Pro features', included: true },
+      { label: '10GB document vault', included: true },
+      { label: 'Multi-CA support', included: true },
+      { label: 'Custom filing schedules', included: true },
+      { label: 'Priority support', included: true },
+      { label: 'Advanced analytics', included: true },
+      { label: 'Dedicated account manager', included: true },
+    ],
+    razorpayAmount: 299900, // in paise
+  },
+] as const;
+
+const COMPARISON_FEATURES = [
+  { label: 'Compliance calendar', free: true, pro: true, enterprise: true },
+  { label: 'Document vault (basic)', free: true, pro: true, enterprise: true },
+  { label: 'CA collaboration', free: true, pro: true, enterprise: true },
+  { label: 'Task management', free: '3 visible', pro: 'Unlimited', enterprise: 'Unlimited' },
+  { label: 'Document uploads', free: '5/month', pro: 'Unlimited', enterprise: 'Unlimited' },
+  { label: 'Storage', free: '100 MB', pro: '2 GB', enterprise: '10 GB' },
+  { label: 'WhatsApp alerts', free: false, pro: true, enterprise: true },
+  { label: 'PDF export', free: false, pro: true, enterprise: true },
+  { label: 'Priority CA', free: false, pro: true, enterprise: true },
+  { label: 'Multi-CA', free: false, pro: false, enterprise: true },
+  { label: 'Custom schedules', free: false, pro: false, enterprise: true },
+  { label: 'Priority support', free: false, pro: false, enterprise: true },
+];
+
+function FeatureValue({ value }: { value: boolean | string }) {
+  if (value === true) return <CheckCircle className="w-4 h-4 text-emerald-500 mx-auto" />;
+  if (value === false) return <X className="w-4 h-4 text-slate-300 mx-auto" />;
+  return <span className="text-xs font-medium text-slate-700">{value}</span>;
 }
 
-const PLANS: Plan[] = [
-  {
-    id: 'free',
-    name: 'Free Forever',
-    price_annual: 0,
-    price_quarterly: 0,
-    suitable_for: 'Single Proprietorships',
-    features: [
-      'Basic compliance dashboard',
-      'Email alerts for deadlines',
-      '100MB document storage',
-      'Up to 3 compliance tasks',
-      'Community support'
-    ]
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    price_annual: 999,
-    price_quarterly: 299,
-    suitable_for: 'LLPs & Small Businesses',
-    popular: true,
-    features: [
-      'Everything in Free',
-      'WhatsApp & SMS alerts',
-      '2GB document vault',
-      'Unlimited compliance tasks',
-      'Smart calendar widget',
-      'Audit trail & legal protection',
-      'Priority email support',
-      '500 WhatsApp credits/month'
-    ]
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price_annual: 2999,
-    price_quarterly: 899,
-    suitable_for: 'Private Limited Companies',
-    features: [
-      'Everything in Pro',
-      'Multi-user access (up to 5 users)',
-      '10GB document vault',
-      'Priority CA tools & workflows',
-      'Advanced analytics dashboard',
-      'Dedicated account manager',
-      'Phone & WhatsApp support',
-      'Unlimited WhatsApp credits',
-      'Custom compliance templates'
-    ]
-  }
-];
-
-const TOPUPS = [
-  {
-    id: 'credits_500',
-    name: '500 WhatsApp Alert Credits',
-    price: 200,
-    description: 'Extra WhatsApp notification credits'
-  },
-  {
-    id: 'storage_10gb',
-    name: '10GB Storage Expansion',
-    price: 300,
-    description: 'Additional vault storage space'
-  }
-];
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise(resolve => {
+    if (document.getElementById('razorpay-script')) { resolve(true); return; }
+    const script = document.createElement('script');
+    script.id = 'razorpay-script';
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
 
 export default function PricingPage() {
   const router = useRouter();
-  const { user, profile, loading: authLoading, signOut } = useAuth();
-  const { toast } = useToast();
-  const [business, setBusiness] = useState<Record<string, unknown> | null>(null);
-  const [subscription, setSubscription] = useState<Record<string, unknown> | null>(null);
-  const [billingCycle, setBillingCycle] = useState<'annual' | 'quarterly'>('annual');
-  const [loading, setLoading] = useState(true);
-  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
-  const [paymentLoading, setPaymentLoading] = useState(false);
+  const { user, loading: authLoading } = useAuth();
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+  const [currentBusinessId, setCurrentBusinessId] = useState<string | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState('');
 
   useEffect(() => {
-    if (!authLoading) {
-      if (user && profile) {
-        loadBusinessData();
-      } else if (!user) {
-        setLoading(false); // show plans in public/read-only mode
-      }
-    }
-  }, [user, authLoading, profile]);
-
-  const loadBusinessData = async () => {
-    try {
-      const { data: businessData } = await supabase
+    if (user) {
+      supabase
         .from('businesses')
-        .select('*')
-        .eq('owner_id', user!.id)
-        .maybeSingle();
+        .select('id')
+        .eq('owner_id', user.id)
+        .maybeSingle()
+        .then(({ data: biz }) => {
+          if (!biz) return;
+          setCurrentBusinessId(biz.id);
+          supabase
+            .from('subscriptions')
+            .select('plan_type')
+            .eq('business_id', biz.id)
+            .eq('status', 'active')
+            .maybeSingle()
+            .then(({ data: sub }) => {
+              setCurrentPlan(sub?.plan_type || 'free');
+            });
+        });
+    }
+  }, [user]);
 
-      if (!businessData) {
-        router.push('/onboarding');
-        return;
+  const handleUpgrade = async (planKey: string, amount: number) => {
+    if (!user) { router.push('/signup?role=business_owner'); return; }
+    if (!currentBusinessId) { router.push('/onboarding'); return; }
+
+    setPaymentError('');
+    setPaymentLoading(planKey);
+
+    try {
+      const loaded = await loadRazorpayScript();
+      if (!loaded) throw new Error('Razorpay failed to load. Please check your connection.');
+
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      // Create Razorpay order (server-side — never trust client-sent amount)
+      const res = await fetch('/api/razorpay/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ plan: planKey, businessId: currentBusinessId }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to create order');
       }
 
-      setBusiness(businessData);
+      const order = await res.json();
 
-      const { data: subData } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('business_id', businessData.id)
-        .maybeSingle();
+      // Open Razorpay checkout
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency || 'INR',
+        name: 'ComplianceHub',
+        description: `${planKey.charAt(0).toUpperCase() + planKey.slice(1)} Plan`,
+        order_id: order.id,
+        prefill: {
+          email: user.email,
+        },
+        handler: async (response: any) => {
+          // Verify payment server-side
+          const verifyRes = await fetch('/api/razorpay/verify-payment', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              businessId: currentBusinessId,
+              plan: planKey,
+            }),
+          });
 
-      setSubscription(subData);
-    } catch (error) {
-      console.error('Error loading business:', error);
-      toast({ title: 'Error', description: 'Failed to load business data.', variant: 'destructive' });
+          if (verifyRes.ok) {
+            setCurrentPlan(planKey);
+            alert(`🎉 Upgraded to ${planKey.charAt(0).toUpperCase() + planKey.slice(1)}! Refreshing dashboard...`);
+            router.push('/dashboard');
+          } else {
+            setPaymentError('Payment verification failed. Contact support if amount was deducted.');
+          }
+        },
+        modal: {
+          ondismiss: () => setPaymentLoading(null),
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', (resp: any) => {
+        setPaymentError('Payment failed: ' + resp.error.description);
+        setPaymentLoading(null);
+      });
+      rzp.open();
+    } catch (err: any) {
+      setPaymentError(err.message || 'Something went wrong. Please try again.');
     } finally {
-      setLoading(false);
+      setPaymentLoading(null);
     }
   };
-
-  const handleSignOut = async () => {
-    await signOut();
-    router.push('/login');
-  };
-
-  /**
-   * Initiates the Razorpay checkout process for a plan upgrade.
-   * Calls the backend API to create an order, opens the Razorpay modal,
-   * and delegates to verifyPayment on success.
-   */
-  const handleUpgrade = async (plan: Plan, cycle: 'annual' | 'quarterly') => {
-    if (!business || !razorpayLoaded) {
-      toast({ title: 'Please Wait', description: 'Payment system is loading...' });
-      return;
-    }
-
-    if (plan.id === 'free') {
-      toast({ title: 'Info', description: 'You are already on the free plan!' });
-      return;
-    }
-
-    const amount = cycle === 'annual' ? plan.price_annual : plan.price_quarterly;
-
-    try {
-      const { data: order, error } = await fetch('/api/razorpay/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: amount * 100,
-          business_id: business.id,
-          plan_type: plan.id,
-          billing_cycle: cycle
-        })
-      }).then(res => res.json());
-
-      if (error) {
-        throw new Error(error);
-      }
-
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: order.amount,
-        currency: 'INR',
-        name: 'ComplianceHub',
-        description: `${plan.name} - ${cycle === 'annual' ? 'Annual' : 'Quarterly'} Subscription`,
-        order_id: order.id,
-        prefill: {
-          name: profile?.full_name,
-          email: profile?.email,
-          contact: profile?.phone
-        },
-        notes: {
-          business_id: business.id,
-          plan_type: plan.id,
-          billing_cycle: cycle
-        },
-        theme: {
-          color: '#1e3a8a'
-        },
-        handler: function (response: Record<string, unknown>) {
-          verifyPayment(response, order.id);
-        }
-      };
-
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
-    } catch (error: any) {
-      toast({ title: 'Payment Failed', description: error.message || 'Could not initiate payment.', variant: 'destructive' });
-    }
-  };
-
-  const verifyPayment = async (response: Record<string, unknown>, orderId: string) => {
-    try {
-      const result = await fetch('/api/razorpay/verify-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          razorpay_order_id: orderId,
-          razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_signature: response.razorpay_signature,
-          business_id: business.id
-        })
-      }).then(res => res.json());
-
-      if (result.success) {
-        toast({ title: 'Payment Successful! 🎉', description: 'Your subscription has been upgraded.' });
-        loadBusinessData();
-        router.push('/dashboard-owner');
-      } else {
-        toast({ title: 'Verification Failed', description: 'Payment verification failed. Please contact support.', variant: 'destructive' });
-      }
-    } catch (error) {
-      toast({ title: 'Error', description: 'Error verifying payment. Please contact support.', variant: 'destructive' });
-    }
-  };
-
-  /**
-   * Triggers a micro-transaction flow for buying extra features like
-   * storage or SMS credits without altering the main subscription.
-   */
-  const handleTopup = async (topup: typeof TOPUPS[0]) => {
-    if (!business || !razorpayLoaded) {
-      toast({ title: 'Please Wait', description: 'Payment system is loading...' });
-      return;
-    }
-
-    try {
-      const { data: order, error } = await fetch('/api/razorpay/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: topup.price * 100,
-          business_id: business.id,
-          plan_type: 'topup',
-          billing_cycle: 'one_time'
-        })
-      }).then(res => res.json());
-
-      if (error) {
-        throw new Error(error);
-      }
-
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: order.amount,
-        currency: 'INR',
-        name: 'ComplianceHub',
-        description: topup.name,
-        order_id: order.id,
-        prefill: {
-          name: profile?.full_name,
-          email: profile?.email,
-          contact: profile?.phone
-        },
-        notes: {
-          business_id: business.id,
-          topup_type: topup.id
-        },
-        theme: {
-          color: '#1e3a8a'
-        },
-        handler: function (response: Record<string, unknown>) {
-          toast({ title: 'Top-up Successful! 🎉', description: 'Your credits have been added.' });
-          loadBusinessData();
-        }
-      };
-
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
-    } catch (error: any) {
-      toast({ title: 'Payment Failed', description: error.message || 'Could not initiate payment.', variant: 'destructive' });
-    }
-  };
-
-  if (authLoading || loading) {
-    return <LoadingSpinner message="Loading pricing..." />;
-  }
 
   return (
-    <>
-      <Script
-        src="https://checkout.razorpay.com/v1/checkout.js"
-        onLoad={() => setRazorpayLoaded(true)}
-      />
-
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50">
-        <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center">
-                  <FileCheck className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-slate-900">Pricing & Plans</h1>
-                  <p className="text-sm text-slate-600">Choose the perfect plan for your business</p>
-                </div>
+    <div className="min-h-screen bg-slate-50">
+      {/* Navigation */}
+      <nav className="bg-white border-b border-slate-200 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {user && (
+              <button onClick={() => router.push('/dashboard')} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+                <ArrowLeft className="w-4 h-4" />
+                Back to Dashboard
+              </button>
+            )}
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                <FileCheck className="w-5 h-5 text-white" />
               </div>
-              <div className="flex items-center gap-3">
-                {user ? (
-                  <>
-                    <Button onClick={() => router.push('/dashboard-owner')} variant="outline" className="border-slate-300 hover:bg-slate-100">
-                      Back to Dashboard
-                    </Button>
-                    <Button variant="outline" onClick={handleSignOut} className="border-slate-300 hover:bg-slate-100">
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Sign Out
-                    </Button>
-                  </>
-                ) : (
-                  <Button onClick={() => router.push('/signup')} className="bg-blue-900 hover:bg-blue-800 text-white">
-                    Get Started Free
-                  </Button>
-                )}
-              </div>
+              <span className="font-bold text-slate-900">ComplianceHub</span>
             </div>
           </div>
-        </header>
-
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          {subscription && (
-            <div className="mb-8 bg-gradient-to-r from-blue-900 to-blue-700 text-white rounded-lg p-6 shadow-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">Current Plan: {subscription.plan_type.toUpperCase()}</h3>
-                  <p className="text-blue-100">
-                    {subscription.plan_type === 'free'
-                      ? 'Upgrade to unlock premium features'
-                      : `Active until ${subscription.end_date ? new Date(subscription.end_date).toLocaleDateString() : 'N/A'}`}
-                  </p>
-                </div>
-                <Badge className="bg-white text-blue-900 text-lg px-4 py-2">
-                  {subscription.status}
-                </Badge>
-              </div>
+          {!user && (
+            <div className="flex items-center gap-3">
+              <a href="/login" className="text-sm text-slate-600 hover:text-slate-900">Log in</a>
+              <a href="/signup" className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors">Sign Up</a>
             </div>
           )}
+        </div>
+      </nav>
 
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 bg-white rounded-full p-1 shadow-md">
-              <button
-                onClick={() => setBillingCycle('annual')}
-                className={`px-6 py-2 rounded-full font-semibold transition-all ${
-                  billingCycle === 'annual'
-                    ? 'bg-blue-900 text-white'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Annual (Save 17%)
-              </button>
-              <button
-                onClick={() => setBillingCycle('quarterly')}
-                className={`px-6 py-2 rounded-full font-semibold transition-all ${
-                  billingCycle === 'quarterly'
-                    ? 'bg-blue-900 text-white'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Quarterly
-              </button>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-extrabold text-slate-900 mb-4">Simple, Transparent Pricing</h1>
+          <p className="text-lg text-slate-500 max-w-xl mx-auto">
+            CAs are always free. Businesses pay only for what they need. No hidden fees, no surprises.
+          </p>
+          {currentPlan && (
+            <div className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-indigo-50 border border-indigo-200 rounded-full">
+              <Star className="w-4 h-4 text-indigo-600" />
+              <span className="text-sm font-semibold text-indigo-700 capitalize">Current plan: {currentPlan}</span>
             </div>
+          )}
+        </div>
+
+        {/* Payment error */}
+        {paymentError && (
+          <div className="max-w-lg mx-auto mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">
+            {paymentError}
           </div>
+        )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            {PLANS.map((plan) => {
-              const price = billingCycle === 'annual' ? plan.price_annual : plan.price_quarterly;
-              const isCurrentPlan = subscription?.plan_type === plan.id;
+        {/* Pricing Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-16">
+          {PLANS.map((plan) => {
+            const isCurrent = currentPlan === plan.key || (!currentPlan && plan.key === 'free');
+            const isLower = plan.key === 'free' && currentPlan && currentPlan !== 'free';
 
-              return (
-                <Card
-                  key={plan.id}
-                  className={`relative shadow-xl border-2 ${
-                    plan.popular
-                      ? 'border-blue-900 shadow-2xl scale-105'
-                      : 'border-slate-200'
-                  }`}
-                >
-                  {plan.popular && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-gradient-to-r from-blue-900 to-blue-700 text-white px-4 py-1 text-sm shadow-lg">
-                        MOST POPULAR
-                      </Badge>
-                    </div>
-                  )}
+            return (
+              <div key={plan.key} className={`relative bg-white rounded-2xl border-2 p-8 ${plan.color} ${plan.popular ? 'scale-105' : ''}`}>
+                {plan.popular && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-full">
+                    Most Popular
+                  </div>
+                )}
 
-                  <CardHeader className={`text-center pb-8 ${plan.popular ? 'bg-gradient-to-br from-blue-50 to-white' : ''}`}>
-                    <CardTitle className="text-2xl font-bold text-slate-900">
-                      {plan.name}
-                    </CardTitle>
-                    <CardDescription className="text-sm text-slate-600 mt-2">
-                      {plan.suitable_for}
-                    </CardDescription>
-                    <div className="mt-6">
-                      <span className="text-5xl font-bold text-blue-900">
-                        ₹{price.toLocaleString()}
+                <div className="mb-6">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{plan.name}</p>
+                  <p className="text-sm text-slate-400 mt-0.5">{plan.subtitle}</p>
+                  <div className="flex items-end gap-1 mt-3">
+                    <span className="text-4xl font-extrabold text-slate-900">{plan.price}</span>
+                    <span className="text-slate-400 mb-1">{plan.period}</span>
+                  </div>
+                </div>
+
+                <ul className="space-y-3 mb-8">
+                  {plan.features.map((f, i) => (
+                    <li key={i} className={`flex items-start gap-2 text-sm ${f.included ? 'text-slate-700' : 'text-slate-400 line-through'}`}>
+                      {f.included
+                        ? <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                        : <X className="w-4 h-4 text-slate-300 flex-shrink-0 mt-0.5" />
+                      }
+                      {f.label}
+                    </li>
+                  ))}
+                </ul>
+
+                {isCurrent ? (
+                  <div className="w-full py-2.5 bg-slate-100 text-slate-500 text-sm font-semibold rounded-xl text-center">
+                    Current Plan
+                  </div>
+                ) : isLower ? (
+                  <div className="w-full py-2.5 text-slate-400 text-sm text-center">N/A (CAs only)</div>
+                ) : plan.razorpayAmount === null ? (
+                  <a href="/signup?role=chartered_accountant"
+                    className={`block w-full py-2.5 text-sm font-semibold rounded-xl text-center transition-colors ${plan.btnClass}`}>
+                    Sign Up as CA
+                  </a>
+                ) : user ? (
+                  <button
+                    onClick={() => handleUpgrade(plan.key, plan.razorpayAmount!)}
+                    disabled={paymentLoading === plan.key}
+                    className={`w-full py-2.5 text-sm font-semibold rounded-xl transition-colors ${plan.btnClass} disabled:opacity-60`}
+                  >
+                    {paymentLoading === plan.key ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Processing...
                       </span>
-                      {price > 0 && (
-                        <span className="text-slate-600">
-                          /{billingCycle === 'annual' ? 'year' : 'quarter'}
-                        </span>
-                      )}
-                    </div>
-                    {price > 0 && (
-                      <p className="text-sm text-slate-500 mt-2">
-                        ₹{Math.round(price / (billingCycle === 'annual' ? 12 : 3))}/month
-                      </p>
-                    )}
-                  </CardHeader>
+                    ) : `Upgrade to ${plan.name}`}
+                  </button>
+                ) : (
+                  <a href={`/signup?role=business_owner`}
+                    className={`block w-full py-2.5 text-sm font-semibold rounded-xl text-center transition-colors ${plan.btnClass}`}>
+                    Sign Up to Get Started
+                  </a>
+                )}
+              </div>
+            );
+          })}
+        </div>
 
-                  <CardContent className="space-y-6">
-                    <div className="space-y-3">
-                      {plan.features.map((feature, index) => (
-                        <div key={index} className="flex items-start gap-2">
-                          <Check className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                          <span className="text-sm text-slate-700">{feature}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {!user ? (
-                      <Button
-                        onClick={() => router.push('/signup')}
-                        className={`w-full font-semibold ${
-                          plan.popular
-                            ? 'bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600'
-                            : 'bg-blue-900 hover:bg-blue-800'
-                        }`}
-                      >
-                        {plan.id === 'free' ? 'Get Started Free' : 'Sign Up to Upgrade'}
-                      </Button>
-                    ) : isCurrentPlan ? (
-                      <Button className="w-full" variant="outline" disabled>
-                        Current Plan
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() => handleUpgrade(plan, billingCycle)}
-                        className={`w-full font-semibold ${
-                          plan.popular
-                            ? 'bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600'
-                            : 'bg-blue-900 hover:bg-blue-800'
-                        }`}
-                        disabled={!razorpayLoaded}
-                      >
-                        {plan.id === 'free' ? 'Current Plan' : 'Upgrade via UPI'}
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
+        {/* Feature Comparison Table */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden max-w-5xl mx-auto">
+          <div className="px-6 py-5 border-b border-slate-100">
+            <h2 className="text-xl font-bold text-slate-900">Full Feature Comparison</h2>
           </div>
-
-          <Card className="shadow-lg border-slate-200">
-            <CardHeader className="bg-gradient-to-r from-slate-800 to-slate-700 text-white rounded-t-lg">
-              <CardTitle className="text-xl">Micro-Transactions & Top-Ups</CardTitle>
-              <CardDescription className="text-slate-300">
-                Need extra credits or storage? Purchase on-demand
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {TOPUPS.map((topup) => (
-                  <Card key={topup.id} className="border-2 border-slate-200 hover:border-blue-300 hover:shadow-md transition-all">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h4 className="font-semibold text-lg text-slate-900">{topup.name}</h4>
-                          <p className="text-sm text-slate-600 mt-1">{topup.description}</p>
-                        </div>
-                        {topup.id.includes('credits') ? (
-                          <Bell className="h-6 w-6 text-blue-900" />
-                        ) : (
-                          <HardDrive className="h-6 w-6 text-blue-900" />
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-3xl font-bold text-blue-900">₹{topup.price}</span>
-                        <Button
-                          onClick={() => handleTopup(topup)}
-                          className="bg-blue-900 hover:bg-blue-800"
-                          disabled={!razorpayLoaded}
-                        >
-                          <Zap className="h-4 w-4 mr-2" />
-                          Buy Now
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  <th className="text-left px-6 py-4 text-slate-700 font-semibold w-1/2">Feature</th>
+                  <th className="text-center px-4 py-4 text-slate-700 font-semibold">Free</th>
+                  <th className="text-center px-4 py-4 text-indigo-700 font-bold">Pro</th>
+                  <th className="text-center px-4 py-4 text-purple-700 font-semibold">Enterprise</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {COMPARISON_FEATURES.map((row, i) => (
+                  <tr key={i} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-3.5 text-slate-700">{row.label}</td>
+                    <td className="px-4 py-3.5 text-center"><FeatureValue value={row.free} /></td>
+                    <td className="px-4 py-3.5 text-center"><FeatureValue value={row.pro} /></td>
+                    <td className="px-4 py-3.5 text-center"><FeatureValue value={row.enterprise} /></td>
+                  </tr>
                 ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="mt-12 bg-white rounded-lg shadow-lg p-8">
-            <h3 className="text-2xl font-bold text-slate-900 text-center mb-8">
-              Why Choose ComplianceHub?
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="text-center">
-                <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
-                  <Shield className="h-8 w-8 text-blue-900" />
-                </div>
-                <h4 className="font-semibold text-slate-900 mb-2">Secure & Compliant</h4>
-                <p className="text-sm text-slate-600">
-                  Bank-grade security with complete audit trails for legal protection
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-                  <TrendingUp className="h-8 w-8 text-green-600" />
-                </div>
-                <h4 className="font-semibold text-slate-900 mb-2">Increase Compliance</h4>
-                <p className="text-sm text-slate-600">
-                  Never miss a deadline with smart reminders and automated tracking
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="h-16 w-16 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-4">
-                  <Users className="h-8 w-8 text-purple-600" />
-                </div>
-                <h4 className="font-semibold text-slate-900 mb-2">CA Collaboration</h4>
-                <p className="text-sm text-slate-600">
-                  Seamless workflows between businesses and their chartered accountants
-                </p>
-              </div>
-            </div>
+              </tbody>
+            </table>
           </div>
-        </main>
+        </div>
+
+        {/* FAQ / CTA */}
+        <div className="text-center mt-12">
+          <p className="text-slate-500 text-sm">
+            Questions? Email us at{' '}
+            <a href="mailto:support@compliancehub.in" className="text-indigo-600 hover:underline">support@compliancehub.in</a>
+          </p>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
