@@ -14,6 +14,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// SUPABASE FIX NEEDED: Run this SQL in Supabase Dashboard > SQL Editor:
+// CREATE POLICY "Users can read own profile" ON profiles
+//   FOR SELECT USING (auth.uid() = id);
+// CREATE POLICY "Users can update own profile" ON profiles
+//   FOR UPDATE USING (auth.uid() = id);
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -25,13 +31,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .maybeSingle();
 
-        setProfile(data);
+        if (error) {
+          console.error('[AuthContext] Profile fetch error:', error.message, error.code, error.details);
+        }
+        setProfile(data ?? null);
       }
 
       setLoading(false);
@@ -44,13 +53,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (session?.user) {
         (async () => {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .maybeSingle();
 
-          setProfile(data);
+          if (error) {
+            console.error('[AuthContext] Profile fetch error (onAuthStateChange):', error.message, error.code);
+          }
+          setProfile(data ?? null);
         })();
       } else {
         setProfile(null);

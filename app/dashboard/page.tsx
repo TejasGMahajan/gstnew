@@ -30,20 +30,35 @@ export default function DashboardPage() {
   const { documents, loading: docsLoading, loadDocuments } = useDocuments(business?.id || null);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    }
-  }, [user, authLoading, router]);
+    if (authLoading) return;
 
-  useEffect(() => {
-    if (user && profile) {
-      if (profile.user_type === 'chartered_accountant') {
-        router.push('/dashboard-ca');
-        return;
-      }
-      loadBusiness();
+    if (!user) {
+      router.push('/login');
+      return;
     }
-  }, [user, profile]);
+
+    // Profile is null — either fetch failed (RLS/500) or genuinely new user.
+    // Either way, send to onboarding so they can set up their account.
+    if (!profile) {
+      setLoading(false);
+      router.push('/onboarding');
+      return;
+    }
+
+    if (profile.user_type === 'chartered_accountant') {
+      router.push('/dashboard-ca');
+      return;
+    }
+
+    if (profile.user_type === 'business_owner') {
+      router.push('/dashboard-owner');
+      return;
+    }
+
+    // Unknown user_type — send to onboarding
+    setLoading(false);
+    router.push('/onboarding');
+  }, [user, profile, authLoading, router]);
 
   const loadBusiness = async () => {
     try {
