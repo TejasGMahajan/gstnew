@@ -45,6 +45,23 @@ export async function GET(request: Request) {
     const pageSize = Math.min(parseInt(url.searchParams.get('page_size') || '20'), 100);
     const offset = (page - 1) * pageSize;
 
+    // Validate status against known values
+    const VALID_STATUSES = ['created','awaiting_documents','under_review','ready_to_file','filed','acknowledged','locked'];
+    if (status && !VALID_STATUSES.includes(status)) {
+      return NextResponse.json({ error: `Invalid status value. Must be one of: ${VALID_STATUSES.join(', ')}` }, { status: 400 });
+    }
+
+    // Ownership check — look up businesses owned by this user
+    const { data: ownedBusinesses } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('owner_id', user.id);
+    const ownedIds = (ownedBusinesses ?? []).map((b: { id: string }) => b.id);
+
+    if (businessId && !ownedIds.includes(businessId)) {
+      return NextResponse.json({ error: 'Forbidden: you do not own this business' }, { status: 403 });
+    }
+
     // Build query
     let query = supabase
       .from('compliance_tasks')
@@ -54,7 +71,15 @@ export async function GET(request: Request) {
       .range(offset, offset + pageSize - 1);
 
     if (status) query = query.eq('status', status);
-    if (businessId) query = query.eq('business_id', businessId);
+    // Restrict to owned businesses only
+    if (businessId) {
+      query = query.eq('business_id', businessId);
+    } else if (ownedIds.length > 0) {
+      query = query.in('business_id', ownedIds);
+    } else {
+      // User owns no businesses — return empty
+      return NextResponse.json({ data: [], pagination: { page, page_size: pageSize, total: 0, total_pages: 0 } });
+    }
 
     const { data: tasks, count, error } = await query;
 

@@ -502,7 +502,7 @@ export default function OnboardingPage() {
 
         {step < 3 && (
           <p className="text-center text-xs text-slate-400 mt-4">
-            Step {step} of 2 — Your data is encrypted and stored securely.
+            Step {step} of 3 — Your data is encrypted and stored securely.
           </p>
         )}
       </div>

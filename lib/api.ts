@@ -148,7 +148,7 @@ export async function fetchDocuments(businessId: string, options?: {
     .select('*', { count: 'exact' })
     .eq('business_id', businessId)
     .is('deleted_at', null)
-    .order('created_at', { ascending: false })
+    .order('uploaded_at', { ascending: false })
     .range(start, end);
 
   if (options?.category) query = query.eq('category', options.category);

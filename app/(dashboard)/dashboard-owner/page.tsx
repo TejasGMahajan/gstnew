@@ -109,6 +109,7 @@ export default function DashboardOwnerPage() {
   const [waCredits, setWaCredits] = useState<WhatsAppCredits | null>(null);
   const [pageLoading, setPageLoading] = useState(true);
   const [markingDone, setMarkingDone] = useState<string | null>(null);
+  const [markDoneError, setMarkDoneError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -181,13 +182,14 @@ export default function DashboardOwnerPage() {
   const handleMarkDone = async (taskId: string) => {
     if (!business || markingDone) return;
     setMarkingDone(taskId);
+    setMarkDoneError(null);
     try {
-      // Uses transitionTaskStatus RPC which allows any active → acknowledged
       await transitionTaskStatus(taskId, 'acknowledged');
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'acknowledged' as const } : t));
       await logUserAction('completed', 'task', taskId, 'Task marked as complete by owner', business.id);
-    } catch {
-      // silently ignore — task may already be in a terminal state
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Could not update task status';
+      setMarkDoneError(msg);
     } finally {
       setMarkingDone(null);
     }
@@ -314,6 +316,11 @@ export default function DashboardOwnerPage() {
                 View all <ArrowRight className="w-3 h-3" />
               </a>
             </div>
+            {markDoneError && (
+              <div className="mx-5 mt-3 px-3 py-2 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700">
+                {markDoneError}
+              </div>
+            )}
             <div className="divide-y divide-slate-50">
               {pageLoading ? (
                 [...Array(4)].map((_, i) => <SkeletonRow key={i} />)

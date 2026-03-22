@@ -271,8 +271,13 @@ export default function AdminDashboardPage() {
                     <td className="px-5 py-3 font-medium text-slate-800">{u.full_name || '—'}</td>
                     <td className="px-5 py-3 text-slate-600">{u.email}</td>
                     <td className="px-5 py-3">
-                      <StatusBadge status={u.user_type === 'chartered_accountant' ? 'active' : u.user_type === 'admin' ? 'enterprise' : 'pending'} />
-                      <span className="ml-2 text-xs text-slate-500 capitalize">{u.user_type?.replace(/_/g, ' ')}</span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        u.user_type === 'admin' ? 'bg-purple-100 text-purple-700' :
+                        u.user_type === 'chartered_accountant' ? 'bg-emerald-100 text-emerald-700' :
+                        'bg-indigo-100 text-indigo-700'
+                      }`}>
+                        {u.user_type?.replace(/_/g, ' ')}
+                      </span>
                     </td>
                     <td className="px-5 py-3 text-slate-500 text-xs">
                       {new Date(u.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}

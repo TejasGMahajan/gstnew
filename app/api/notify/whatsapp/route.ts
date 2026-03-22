@@ -115,10 +115,64 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 2. Parse + validate body
+  // 2. Parse body — support shorthand { taskId, businessId } from CA dashboard
+  let rawBody: Record<string, unknown>;
+  try {
+    rawBody = await request.json();
+  } catch {
+    return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400 });
+  }
+
+  // Shorthand: CA dashboard sends { taskId, businessId } — look up everything server-side
+  if (rawBody.taskId && !rawBody.recipientPhone) {
+    const taskId    = rawBody.taskId    as string;
+    const businessId = rawBody.businessId as string | undefined;
+
+    if (!businessId) {
+      return NextResponse.json({ success: false, error: 'businessId required with taskId' }, { status: 400 });
+    }
+
+    // Feature gate
+    const access = await checkFeatureAccess(businessId, 'whatsapp_reminders');
+    if (!access.allowed) {
+      return NextResponse.json({ success: false, error: access.reason, plan: access.plan }, { status: 402 });
+    }
+
+    // Fetch task + business owner phone in parallel
+    const [taskRes, bizRes] = await Promise.all([
+      supabaseAdmin.from('compliance_tasks').select('task_name, due_date').eq('id', taskId).single(),
+      supabaseAdmin.from('businesses').select('business_name, owner_id').eq('id', businessId).single(),
+    ]);
+
+    const task    = taskRes.data;
+    const biz     = bizRes.data;
+    if (!task || !biz) {
+      return NextResponse.json({ success: false, error: 'Task or business not found' }, { status: 404 });
+    }
+
+    const { data: ownerProfile } = await supabaseAdmin
+      .from('profiles').select('phone').eq('id', biz.owner_id).single();
+
+    if (!ownerProfile?.phone) {
+      return NextResponse.json({ success: false, error: 'Business owner has no phone number on file' }, { status: 422 });
+    }
+
+    // Re-route as a deadline_reminder with looked-up data
+    rawBody = {
+      recipientPhone: ownerProfile.phone,
+      messageType:    'deadline_reminder',
+      data: {
+        businessName: biz.business_name,
+        taskName:     task.task_name,
+        dueDate:      new Date(task.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+      },
+      businessId,
+    };
+  }
+
   let body: RequestBody;
   try {
-    body = RequestSchema.parse(await request.json());
+    body = RequestSchema.parse(rawBody);
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json(
@@ -126,7 +180,7 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 });
   }
 
   const { recipientPhone, messageType, data, businessId } = body;
