@@ -33,6 +33,8 @@ export default function SignupPage() {
   const [error, setError] = useState('');
   const [signedUpEmail, setSignedUpEmail] = useState('');
 
+  useEffect(() => { document.title = 'Sign Up — ComplianceHub'; }, []);
+
   useEffect(() => {
     document.title = 'Sign Up — ComplianceHub';
   }, []);
