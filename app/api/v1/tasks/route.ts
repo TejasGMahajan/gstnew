@@ -71,7 +71,8 @@ export async function GET(request: Request) {
         total_pages: Math.ceil((count || 0) / pageSize),
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    console.error('[api/v1/tasks] unhandled error:', err instanceof Error ? err.message : String(err));
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

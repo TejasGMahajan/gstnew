@@ -50,8 +50,12 @@ export async function POST(request: NextRequest) {
       }
     );
 
+    if (!orderResponse.ok) {
+      console.error('[razorpay/verify-payment] Razorpay order fetch failed:', orderResponse.status);
+      return NextResponse.json({ error: 'Failed to verify order with Razorpay' }, { status: 502 });
+    }
     const orderData = await orderResponse.json();
-    const { plan_type, billing_cycle } = orderData.notes;
+    const { plan_type, billing_cycle } = orderData.notes ?? {};
 
     let endDate = new Date();
     if (billing_cycle === 'annual') {

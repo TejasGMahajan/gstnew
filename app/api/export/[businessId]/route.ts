@@ -226,11 +226,13 @@ function buildPDF(
 
       // Coloured status pill
       const statusColors: Record<string, [number, number, number]> = {
-        pending:      [245, 158, 11],
-        acknowledged: [16, 185, 129],
-        locked:       [16, 185, 129],
-        completed:    [16, 185, 129],
-        created:      [99, 102, 241],
+        created:            [99,  102, 241],
+        awaiting_documents: [245, 158,  11],
+        under_review:       [245, 158,  11],
+        ready_to_file:      [245, 158,  11],
+        filed:              [16,  185, 129],
+        acknowledged:       [16,  185, 129],
+        locked:             [16,  185, 129],
       };
       const sc = statusColors[task.status] ?? [100, 116, 139];
       doc.setTextColor(...sc);
