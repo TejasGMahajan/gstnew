@@ -58,7 +58,7 @@ export default function VaultPage() {
   const [business, setBusiness] = useState<any>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [subscription, setSubscription] = useState<any>(null);
-  const [storageUsage, setStorageUsage] = useState<{ used_bytes: number; total_bytes: number } | null>(null);
+  const [storageUsage, setStorageUsage] = useState<{ used_mb: number; total_mb: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('all');
   const [page, setPage] = useState(1);
@@ -106,7 +106,7 @@ export default function VaultPage() {
 
         supabase
           .from('storage_usage')
-          .select('used_bytes, total_bytes')
+          .select('used_mb, total_mb')
           .eq('business_id', biz.id)
           .maybeSingle(),
       ]);
@@ -184,9 +184,9 @@ export default function VaultPage() {
 
   const plan = subscription?.plan_type || 'free';
 
-  const storageMB = storageUsage ? (storageUsage.used_bytes / 1024 / 1024).toFixed(1) : '0';
-  const storageLimitMB = plan === 'enterprise' ? 10240 : plan === 'pro' ? 2048 : 100;
-  const storagePercent = storageUsage ? Math.min(100, (storageUsage.used_bytes / storageUsage.total_bytes) * 100) : 0;
+  const storageMB = storageUsage ? storageUsage.used_mb.toFixed(1) : '0';
+  const storageLimitMB = storageUsage ? storageUsage.total_mb : (plan === 'enterprise' ? 10240 : plan === 'pro' ? 2048 : 100);
+  const storagePercent = storageUsage ? Math.min(100, (storageUsage.used_mb / storageUsage.total_mb) * 100) : 0;
 
   const catCount = (cat: string) =>
     cat === 'all' ? documents.length : documents.filter(d => d.category === cat).length;

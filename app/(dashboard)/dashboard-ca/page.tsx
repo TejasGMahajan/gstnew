@@ -99,9 +99,10 @@ function planBadgeClass(plan: string) {
   return 'bg-slate-100 text-slate-600 border-slate-200';
 }
 
+const DONE_STATUSES_CA = new Set(['filed', 'acknowledged', 'locked']);
 function clientScore(tasks: any[]) {
   if (!tasks || tasks.length === 0) return 100;
-  const done = tasks.filter(t => t.status === 'completed').length;
+  const done = tasks.filter(t => DONE_STATUSES_CA.has(t.status)).length;
   return Math.round((done / tasks.length) * 100);
 }
 

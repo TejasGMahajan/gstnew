@@ -171,7 +171,7 @@ export default function FileUpload({ businessId, userId, category, onUploadCompl
       setProgress(95);
 
       // 6. Log action
-      await logUserAction('upload', 'document', docData.id, `Uploaded ${safeFileName} to ${category}`, businessId);
+      await logUserAction('uploaded', 'document', docData.id, `Uploaded ${safeFileName} to ${category}`, businessId);
 
       setProgress(100);
       setSuccess(true);

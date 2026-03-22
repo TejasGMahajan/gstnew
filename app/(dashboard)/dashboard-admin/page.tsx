@@ -441,7 +441,7 @@ export default function AdminDashboardPage() {
             >
               <option value="">All entity types</option>
               <option value="document">Document</option>
-              <option value="compliance_task">Compliance Task</option>
+              <option value="task">Task</option>
               <option value="business">Business</option>
               <option value="subscription">Subscription</option>
             </select>

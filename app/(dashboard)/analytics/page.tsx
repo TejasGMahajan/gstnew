@@ -91,21 +91,27 @@ export default function AnalyticsPage() {
     return { label: d.toLocaleString('en-IN', { month: 'short' }), year: d.getFullYear(), month: d.getMonth() };
   });
 
+  // 7-state workflow helpers
+  const DONE_STATUSES = new Set(['filed', 'acknowledged', 'locked']);
+  const ACTIVE_STATUSES = new Set(['created', 'awaiting_documents', 'under_review', 'ready_to_file']);
+  const isTaskDone = (t: any) => DONE_STATUSES.has(t.status);
+  const isTaskOverdue = (t: any) => ACTIVE_STATUSES.has(t.status) && new Date(t.due_date) < new Date();
+
   // Compliance trend: % completed tasks per month
   const complianceTrend = last6Months.map(({ label, year, month }) => {
     const monthTasks = tasks.filter(t => {
       const d = new Date(t.due_date);
       return d.getFullYear() === year && d.getMonth() === month;
     });
-    const done = monthTasks.filter(t => t.status === 'completed').length;
+    const done = monthTasks.filter(isTaskDone).length;
     const score = monthTasks.length > 0 ? Math.round((done / monthTasks.length) * 100) : 0;
     return { month: label, score };
   });
 
   // Task breakdown for donut
-  const completed = tasks.filter(t => t.status === 'completed').length;
-  const pending = tasks.filter(t => t.status === 'pending').length;
-  const overdue = tasks.filter(t => t.status === 'overdue').length;
+  const completed = tasks.filter(isTaskDone).length;
+  const pending = tasks.filter(t => ACTIVE_STATUSES.has(t.status) && !isTaskOverdue(t)).length;
+  const overdue = tasks.filter(isTaskOverdue).length;
   const taskBreakdown = [
     { name: 'Completed', value: completed, color: COLORS.emerald },
     { name: 'Pending', value: pending, color: COLORS.amber },
@@ -135,7 +141,7 @@ export default function AnalyticsPage() {
   const completionRate = totalTasks > 0 ? Math.round((completed / totalTasks) * 100) : 0;
 
   // Average days to complete
-  const completedWithDates = tasks.filter(t => t.status === 'completed' && t.completed_at);
+  const completedWithDates = tasks.filter(t => isTaskDone(t) && t.completed_at);
   const avgDays = completedWithDates.length > 0
     ? Math.round(
         completedWithDates.reduce((sum, t) => {
@@ -147,7 +153,7 @@ export default function AnalyticsPage() {
     : 0;
 
   // Most missed: type with most overdue
-  const overdueTasks = tasks.filter(t => t.status === 'overdue');
+  const overdueTasks = tasks.filter(isTaskOverdue);
   const typeOverdueCounts = overdueTasks.reduce((acc, t) => {
     acc[t.task_type] = (acc[t.task_type] || 0) + 1;
     return acc;
