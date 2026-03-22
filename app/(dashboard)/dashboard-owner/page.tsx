@@ -11,7 +11,7 @@ import { SkeletonCard, SkeletonRow } from '@/components/shared/SkeletonCard';
 import StatusBadge from '@/components/shared/StatusBadge';
 import {
   CheckCircle, Clock, FileText, TrendingUp, AlertTriangle,
-  Upload, HardDrive, MessageSquare, ArrowRight, RefreshCw
+  Upload, HardDrive, MessageSquare, ArrowRight, RefreshCw, UserCheck, X
 } from 'lucide-react';
 import type { ComplianceTask, Document } from '@/lib/supabase/types';
 
@@ -110,6 +110,8 @@ export default function DashboardOwnerPage() {
   const [pageLoading, setPageLoading] = useState(true);
   const [markingDone, setMarkingDone] = useState<string | null>(null);
   const [markDoneError, setMarkDoneError] = useState<string | null>(null);
+  const [pendingInvites, setPendingInvites] = useState<any[]>([]);
+  const [respondingInvite, setRespondingInvite] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -127,6 +129,14 @@ export default function DashboardOwnerPage() {
         return;
       }
       setBusiness(biz);
+
+      // Fetch pending CA invites for this business
+      const { data: invites } = await supabase
+        .from('client_relationships')
+        .select('id, status, ca_profile_id, profiles!ca_profile_id(full_name, email)')
+        .eq('business_id', biz.id)
+        .eq('status', 'pending');
+      setPendingInvites(invites || []);
 
       // Parallel fetches
       const [tasksRes, docsRes, subRes, storageRes, waRes] = await Promise.allSettled([
@@ -195,6 +205,19 @@ export default function DashboardOwnerPage() {
     }
   };
 
+  const handleInviteResponse = async (inviteId: string, accept: boolean) => {
+    setRespondingInvite(inviteId);
+    try {
+      await supabase
+        .from('client_relationships')
+        .update({ status: accept ? 'active' : 'rejected' })
+        .eq('id', inviteId);
+      setPendingInvites(prev => prev.filter(i => i.id !== inviteId));
+    } finally {
+      setRespondingInvite(null);
+    }
+  };
+
   // ── Derived Stats ────────────────────────────────────────────────────────
   const overdueTasks = tasks.filter(isTaskOverdue);
   const completedTasks = tasks.filter(isTaskDone);
@@ -251,6 +274,40 @@ export default function DashboardOwnerPage() {
             <p className="text-xs text-amber-700 mt-0.5">Your compliance calendar may be incomplete without GSTIN.</p>
           </div>
         </a>
+      )}
+
+      {/* ── Pending CA Invites ── */}
+      {pendingInvites.length > 0 && (
+        <div className="mb-4 space-y-2">
+          {pendingInvites.map(invite => {
+            const ca = (invite as any).profiles;
+            return (
+              <div key={invite.id} className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                <UserCheck className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-blue-900">CA Invite from {ca?.full_name || 'a Chartered Accountant'}</p>
+                  <p className="text-xs text-blue-700 mt-0.5">{ca?.email} wants to manage your compliance. Accept to give them access.</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => handleInviteResponse(invite.id, true)}
+                    disabled={respondingInvite === invite.id}
+                    className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    onClick={() => handleInviteResponse(invite.id, false)}
+                    disabled={respondingInvite === invite.id}
+                    className="p-1.5 text-blue-400 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-60"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {/* ── Page Header ── */}
