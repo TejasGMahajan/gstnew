@@ -29,7 +29,6 @@ const ownerNav: NavItem[] = [
 const caNav: NavItem[] = [
   { label: 'Client Dashboard', href: '/dashboard-ca',  icon: LayoutDashboard },
   { label: 'Analytics',        href: '/analytics',     icon: BarChart3 },
-  { label: 'Pricing & Plans',  href: '/pricing',       icon: CreditCard },
 ];
 
 const adminNav: NavItem[] = [
