@@ -157,6 +157,7 @@ export default function FileUpload({ businessId, userId, category, onUploadCompl
           business_id: businessId,
           file_name: safeFileName,
           file_url: fileUrl,
+          storage_path: storagePath,
           file_type: selectedFile.type || selectedFile.name.split('.').pop() || 'unknown',
           file_size: selectedFile.size,
           category: category,
