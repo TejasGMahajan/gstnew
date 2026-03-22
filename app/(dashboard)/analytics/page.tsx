@@ -61,12 +61,14 @@ export default function AnalyticsPage() {
         supabase
           .from('compliance_tasks')
           .select('id, status, due_date, task_type, created_at, completed_at')
-          .eq('business_id', biz.id),
+          .eq('business_id', biz.id)
+          .is('deleted_at', null),
 
         supabase
           .from('documents')
           .select('id, uploaded_at, category')
           .eq('business_id', biz.id)
+          .is('deleted_at', null)
           .order('uploaded_at', { ascending: false }),
       ]);
 

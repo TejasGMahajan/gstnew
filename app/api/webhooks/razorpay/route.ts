@@ -78,6 +78,14 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Look up business owner for a proper audit user_id
+      const { data: bizRow } = await supabase
+        .from('businesses')
+        .select('owner_id')
+        .eq('id', business_id)
+        .maybeSingle();
+      const auditUserId = bizRow?.owner_id ?? business_id;
+
       let endDate = new Date();
       if (billing_cycle === 'annual') {
         endDate.setFullYear(endDate.getFullYear() + 1);
@@ -132,7 +140,7 @@ export async function POST(request: NextRequest) {
 
       await supabase.from('audit_logs').insert({
         business_id,
-        user_id: business_id,
+        user_id: auditUserId,
         entity_type: 'subscription',
         entity_id: business_id,
         action: 'updated',

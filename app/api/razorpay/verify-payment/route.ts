@@ -56,7 +56,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to verify order with Razorpay' }, { status: 502 });
     }
     const orderData = await orderResponse.json();
-    const { plan_type, billing_cycle } = orderData.notes ?? {};
+    // Always use business_id from the verified order notes — never trust the client-sent value
+    const { plan_type, billing_cycle, business_id: verified_business_id } = orderData.notes ?? {};
+
+    if (!verified_business_id || !plan_type) {
+      return NextResponse.json({ error: 'Invalid order data: missing business or plan' }, { status: 400 });
+    }
+
+    // Look up business owner so audit log has a real user_id
+    const { data: bizRow } = await supabase
+      .from('businesses')
+      .select('owner_id')
+      .eq('id', verified_business_id)
+      .maybeSingle();
+
+    const auditUserId = bizRow?.owner_id ?? verified_business_id;
 
     let endDate = new Date();
     if (billing_cycle === 'annual') {
@@ -78,7 +92,7 @@ export async function POST(request: NextRequest) {
         end_date: endDate.toISOString(),
         updated_at: new Date().toISOString()
       })
-      .eq('business_id', business_id);
+      .eq('business_id', verified_business_id);
 
     if (updateError) {
       console.error('Subscription update error:', updateError);
@@ -92,29 +106,29 @@ export async function POST(request: NextRequest) {
       await supabase
         .from('whatsapp_credits')
         .update({ credits_total: 500, credits_remaining: 500 })
-        .eq('business_id', business_id);
+        .eq('business_id', verified_business_id);
 
       await supabase
         .from('storage_usage')
         .update({ total_mb: 2048 })
-        .eq('business_id', business_id);
+        .eq('business_id', verified_business_id);
     } else if (plan_type === 'enterprise') {
       await supabase
         .from('whatsapp_credits')
         .update({ credits_total: 999999, credits_remaining: 999999 })
-        .eq('business_id', business_id);
+        .eq('business_id', verified_business_id);
 
       await supabase
         .from('storage_usage')
         .update({ total_mb: 10240 })
-        .eq('business_id', business_id);
+        .eq('business_id', verified_business_id);
     }
 
     await supabase.from('audit_logs').insert({
-      business_id,
-      user_id: business_id,
+      business_id: verified_business_id,
+      user_id: auditUserId,
       entity_type: 'subscription',
-      entity_id: business_id,
+      entity_id: verified_business_id,
       action: 'updated',
       description: `Subscription upgraded to ${plan_type} (${billing_cycle})`
     });
