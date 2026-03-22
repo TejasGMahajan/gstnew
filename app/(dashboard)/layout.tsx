@@ -30,9 +30,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-slate-50">
       <Sidebar />
       <main className="lg:pl-60">
-        <div className="page-container">
-          {children}
-        </div>
+        {children}
       </main>
     </div>
   );

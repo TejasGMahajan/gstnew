@@ -64,11 +64,12 @@ const TABS: { key: TabKey; label: string; icon: typeof Users }[] = [
   { key: 'reports', label: 'Reports', icon: BarChart2 },
 ];
 
-const PIPELINE_STATUSES = ['created', 'awaiting_documents', 'under_review', 'filed', 'acknowledged'] as const;
+const PIPELINE_STATUSES = ['created', 'awaiting_documents', 'under_review', 'ready_to_file', 'filed', 'acknowledged'] as const;
 const PIPELINE_LABELS: Record<string, string> = {
   created: 'Created',
   awaiting_documents: 'Awaiting Docs',
   under_review: 'Under Review',
+  ready_to_file: 'Ready to File',
   filed: 'Filed',
   acknowledged: 'Acknowledged',
 };

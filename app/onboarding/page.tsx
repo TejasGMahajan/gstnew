@@ -49,7 +49,7 @@ function generateComplianceTasks(businessId: string, entityType: string, turnove
       task_name: name,
       task_type: type,
       due_date: dueDate.toISOString().split('T')[0],
-      status: dueDate < now ? 'overdue' : 'pending',
+      status: 'created',
       priority,
       description: desc,
     });
