@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     .select('id, task_name, due_date, status, business_id')
     .gte('due_date', todayStr)
     .lte('due_date', cutoffStr)
-    .not('status', 'in', '("completed","acknowledged")');
+    .not('status', 'in', '("filed","acknowledged","locked")');
 
   if (taskError) {
     console.error('[tasks/due-soon] task query error:', taskError.message);

@@ -165,8 +165,8 @@ function buildPDF(
   y += 14;
 
   // Summary stat boxes
-  const pending  = tasks.filter(t => !['acknowledged', 'locked', 'completed'].includes(t.status));
-  const complete = tasks.filter(t => ['acknowledged', 'locked', 'completed'].includes(t.status));
+  const pending  = tasks.filter(t => !['filed', 'acknowledged', 'locked'].includes(t.status));
+  const complete = tasks.filter(t => ['filed', 'acknowledged', 'locked'].includes(t.status));
 
   const statBoxes = [
     { label: 'Total Tasks',      value: String(tasks.length),     color: [99,  102, 241] as [number,number,number] },
