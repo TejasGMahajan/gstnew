@@ -16,7 +16,7 @@ import {
   ChevronLeft, ChevronRight, RefreshCw, Plus, X, Copy, CheckCircle,
   MessageSquare, Download, Briefcase, ClipboardList, DollarSign,
   FileCheck, TrendingUp, Eye, Send, ChevronDown, LayoutGrid,
-  BookOpen, Activity, Trash2
+  BookOpen, Activity, Trash2, ScanLine, FileSearch, AlertCircle
 } from 'lucide-react';
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ interface Task {
   updated_at?: string;
 }
 
-type TabKey = 'overview' | 'clients' | 'calendar' | 'pipeline' | 'chase' | 'audit' | 'checklist' | 'penalty' | 'reports';
+type TabKey = 'overview' | 'clients' | 'calendar' | 'pipeline' | 'chase' | 'audit' | 'checklist' | 'penalty' | 'reports' | 'ocr';
 
 const TABS: { key: TabKey; label: string; icon: typeof Users }[] = [
   { key: 'overview', label: 'Overview', icon: LayoutGrid },
@@ -62,6 +62,7 @@ const TABS: { key: TabKey; label: string; icon: typeof Users }[] = [
   { key: 'checklist', label: 'Checklist', icon: ClipboardList },
   { key: 'penalty', label: 'Penalty', icon: DollarSign },
   { key: 'reports', label: 'Reports', icon: BarChart2 },
+  { key: 'ocr', label: 'Doc Scanner', icon: ScanLine },
 ];
 
 const PIPELINE_STATUSES = ['created', 'awaiting_documents', 'under_review', 'ready_to_file', 'filed', 'acknowledged', 'locked'] as const;
@@ -247,6 +248,11 @@ export default function DashboardCAPage() {
 
   // Reports state
   const [reportLoading, setReportLoading] = useState<string | null>(null);
+  // OCR
+  const [ocrFile, setOcrFile] = useState<File | null>(null);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrResult, setOcrResult] = useState<any>(null);
+  const [ocrError, setOcrError] = useState('');
 
   // ── Data Loading ───────────────────────────────────────────────────────────
 
@@ -481,6 +487,104 @@ export default function DashboardCAPage() {
       .eq('ca_profile_id', user!.id);
     setClients(prev => prev.filter(c => c.id !== clientId));
     if (selectedClient?.id === clientId) setSelectedClient(null);
+  };
+
+  const handleOcrScan = async () => {
+    if (!ocrFile) return;
+    setOcrLoading(true);
+    setOcrError('');
+    setOcrResult(null);
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(ocrFile);
+      reader.onload = async () => {
+        const dataUrl = reader.result as string;
+        const [meta, base64] = dataUrl.split(',');
+        const mediaType = meta.match(/:(.*?);/)?.[1] || 'image/png';
+        const res = await fetch('/api/ocr', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: base64, mediaType }),
+        });
+        const json = await res.json();
+        if (!res.ok) { setOcrError(json.error || 'OCR failed'); setOcrLoading(false); return; }
+        // Build editable fields list from result
+        const flat: { key: string; label: string; value: string; selected: boolean }[] = [];
+        const d = json.data;
+        if (d.documentType) flat.push({ key: 'documentType', label: 'Document Type', value: d.documentType, selected: true });
+        if (d.summary) flat.push({ key: 'summary', label: 'Summary', value: d.summary, selected: true });
+        (d.parties || []).forEach((p: any, i: number) => {
+          if (p.name) flat.push({ key: `party_${i}_name`, label: `${p.role || 'Party'} Name`, value: p.name, selected: true });
+          if (p.gstin) flat.push({ key: `party_${i}_gstin`, label: `${p.role || 'Party'} GSTIN`, value: p.gstin, selected: true });
+          if (p.pan) flat.push({ key: `party_${i}_pan`, label: `${p.role || 'Party'} PAN`, value: p.pan, selected: true });
+          if (p.address) flat.push({ key: `party_${i}_address`, label: `${p.role || 'Party'} Address`, value: p.address, selected: false });
+        });
+        (d.keyDates || []).forEach((kd: any) => {
+          if (kd.date) flat.push({ key: `date_${kd.label}`, label: kd.label, value: kd.date, selected: true });
+        });
+        (d.keyAmounts || []).forEach((ka: any) => {
+          if (ka.amount) flat.push({ key: `amt_${ka.label}`, label: ka.label, value: ka.amount, selected: true });
+        });
+        (d.identifiers || []).forEach((id: any) => {
+          if (id.value) flat.push({ key: `id_${id.label}`, label: id.label, value: id.value, selected: true });
+        });
+        Object.entries(d.fields || {}).forEach(([k, v]) => {
+          if (v) flat.push({ key: `field_${k}`, label: k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), value: String(v), selected: false });
+        });
+        setOcrResult({ raw: d, fields: flat, lineItems: d.lineItems || [], complianceNotes: d.complianceNotes || [], warnings: d.warnings || [], reportTitle: d.documentType || 'Document', clientNote: '' });
+        setOcrLoading(false);
+      };
+    } catch (e: any) {
+      setOcrError(e.message); setOcrLoading(false);
+    }
+  };
+
+  const generateFilingReport = () => {
+    if (!ocrResult) return;
+    const selectedFields = ocrResult.fields.filter((f: any) => f.selected);
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>${ocrResult.reportTitle} — Filing Report</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; color: #1e293b; font-size: 14px; }
+  h1 { font-size: 22px; color: #312e81; border-bottom: 2px solid #312e81; padding-bottom: 8px; }
+  h2 { font-size: 15px; color: #475569; margin-top: 24px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .meta { color: #64748b; font-size: 12px; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th { background: #f1f5f9; text-align: left; padding: 8px 12px; font-size: 12px; text-transform: uppercase; color: #64748b; }
+  td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+  td:first-child { font-weight: 600; color: #334155; width: 35%; }
+  .note-box { background: #fefce8; border: 1px solid #fde047; border-radius: 6px; padding: 12px 16px; margin-top: 8px; font-size: 13px; }
+  .warn-box { background: #fff1f2; border: 1px solid #fca5a5; border-radius: 6px; padding: 12px 16px; margin-top: 8px; font-size: 13px; }
+  .badge { display: inline-block; background: #e0e7ff; color: #4338ca; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 600; }
+  .footer { margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 12px; color: #94a3b8; font-size: 11px; }
+  @media print { body { margin: 20px; } }
+</style>
+</head>
+<body>
+<h1>📄 ${ocrResult.reportTitle}</h1>
+<p class="meta">Generated by Complifile CA Command Centre &nbsp;|&nbsp; ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })} &nbsp;|&nbsp; <span class="badge">CA: ${profile?.full_name || 'CA'}</span></p>
+${ocrResult.clientNote ? `<div class="note-box"><strong>Notes:</strong> ${ocrResult.clientNote}</div>` : ''}
+<h2>Extracted Data</h2>
+<table>
+  <tr><th>Field</th><th>Value</th></tr>
+  ${selectedFields.map((f: any) => `<tr><td>${f.label}</td><td>${f.value}</td></tr>`).join('')}
+</table>
+${ocrResult.lineItems.length > 0 ? `
+<h2>Line Items</h2>
+<table>
+  <tr><th>Description</th><th>HSN</th><th>Qty</th><th>Rate</th><th>Amount</th></tr>
+  ${ocrResult.lineItems.map((li: any) => `<tr><td>${li.description || ''}</td><td>${li.hsn || ''}</td><td>${li.qty || ''}</td><td>${li.rate || ''}</td><td>${li.amount || ''}</td></tr>`).join('')}
+</table>` : ''}
+${ocrResult.complianceNotes.length > 0 ? `<h2>Compliance Notes</h2><div class="note-box">${ocrResult.complianceNotes.map((n: string) => `• ${n}`).join('<br>')}</div>` : ''}
+${ocrResult.warnings.length > 0 ? `<h2>Warnings</h2><div class="warn-box">${ocrResult.warnings.map((w: string) => `⚠ ${w}`).join('<br>')}</div>` : ''}
+<div class="footer">Complifile — Confidential Filing Report &nbsp;|&nbsp; For internal CA use only</div>
+</body></html>`;
+    const blob = new Blob([html], { type: 'text/html' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${ocrResult.reportTitle.replace(/\s+/g, '_')}_filing_report.html`;
+    a.click();
   };
 
   const inviteLink = typeof window !== 'undefined' ? `${window.location.origin}/signup?role=business_owner&ca=${user?.id}` : '';
@@ -1532,6 +1636,168 @@ export default function DashboardCAPage() {
               <Download className="w-4 h-4" /> Download CSV
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          TAB — DOC SCANNER (OCR)
+      ═══════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'ocr' && (
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="card-base p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+                <ScanLine className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Document Scanner</h2>
+                <p className="text-xs text-slate-500">Upload any compliance document — GST Invoice, TDS Certificate, ITR, PF, ROC, etc. AI extracts all fields.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Upload zone */}
+          <div className="card-base p-6">
+            <label className="block text-sm font-semibold text-slate-700 mb-3">Upload Document</label>
+            <label
+              className={`flex flex-col items-center justify-center gap-3 p-8 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${ocrFile ? 'border-indigo-400 bg-indigo-50' : 'border-slate-300 hover:border-indigo-400 hover:bg-slate-50'}`}
+            >
+              <FileSearch className="w-10 h-10 text-slate-400" />
+              {ocrFile ? (
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-indigo-700">{ocrFile.name}</p>
+                  <p className="text-xs text-slate-500">{(ocrFile.size / 1024).toFixed(1)} KB — click to change</p>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <p className="text-sm font-medium text-slate-600">Drop file here or click to browse</p>
+                  <p className="text-xs text-slate-400 mt-1">PDF, PNG, JPG, JPEG • Max 10 MB</p>
+                </div>
+              )}
+              <input type="file" className="hidden" accept=".pdf,.png,.jpg,.jpeg"
+                onChange={e => { setOcrFile(e.target.files?.[0] || null); setOcrResult(null); setOcrError(''); }} />
+            </label>
+            {ocrError && (
+              <div className="flex items-center gap-2 mt-3 p-3 bg-rose-50 border border-rose-200 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                <p className="text-sm text-rose-700">{ocrError}</p>
+              </div>
+            )}
+            <button
+              onClick={handleOcrScan}
+              disabled={!ocrFile || ocrLoading}
+              className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white font-semibold text-sm rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            >
+              <ScanLine className="w-4 h-4" />
+              {ocrLoading ? 'Scanning…' : 'Scan & Extract Data'}
+            </button>
+          </div>
+
+          {/* Results */}
+          {ocrResult && (
+            <>
+              {/* Warnings */}
+              {ocrResult.warnings.length > 0 && (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                  <p className="text-sm font-semibold text-amber-800 mb-1">⚠ Warnings</p>
+                  {ocrResult.warnings.map((w: string, i: number) => (
+                    <p key={i} className="text-xs text-amber-700">• {w}</p>
+                  ))}
+                </div>
+              )}
+
+              {/* Compliance notes */}
+              {ocrResult.complianceNotes.length > 0 && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                  <p className="text-sm font-semibold text-blue-800 mb-1">ℹ Compliance Notes</p>
+                  {ocrResult.complianceNotes.map((n: string, i: number) => (
+                    <p key={i} className="text-xs text-blue-700">• {n}</p>
+                  ))}
+                </div>
+              )}
+
+              {/* Field selection & editing */}
+              <div className="card-base p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-slate-900">Select & Edit Fields for Report</h3>
+                  <div className="flex gap-2">
+                    <button onClick={() => setOcrResult((r: any) => ({ ...r, fields: r.fields.map((f: any) => ({ ...f, selected: true })) }))}
+                      className="text-xs text-indigo-600 hover:underline">Select all</button>
+                    <span className="text-slate-300">|</span>
+                    <button onClick={() => setOcrResult((r: any) => ({ ...r, fields: r.fields.map((f: any) => ({ ...f, selected: false })) }))}
+                      className="text-xs text-slate-500 hover:underline">None</button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {ocrResult.fields.map((f: any, i: number) => (
+                    <div key={f.key} className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${f.selected ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-200 opacity-60'}`}>
+                      <input type="checkbox" checked={f.selected}
+                        onChange={() => setOcrResult((r: any) => ({ ...r, fields: r.fields.map((x: any, j: number) => j === i ? { ...x, selected: !x.selected } : x) }))}
+                        className="mt-1 w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-slate-500 mb-1">{f.label}</p>
+                        <input
+                          type="text"
+                          value={f.value}
+                          onChange={e => setOcrResult((r: any) => ({ ...r, fields: r.fields.map((x: any, j: number) => j === i ? { ...x, value: e.target.value } : x) }))}
+                          className="w-full text-sm text-slate-800 bg-transparent border-b border-slate-200 focus:outline-none focus:border-indigo-400 pb-0.5"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Line items preview */}
+              {ocrResult.lineItems.length > 0 && (
+                <div className="card-base p-6">
+                  <h3 className="font-bold text-slate-900 mb-3">Line Items</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead><tr className="text-xs text-slate-500 border-b border-slate-100">
+                        <th className="text-left pb-2">Description</th><th className="text-left pb-2">HSN</th>
+                        <th className="text-right pb-2">Qty</th><th className="text-right pb-2">Rate</th><th className="text-right pb-2">Amount</th>
+                      </tr></thead>
+                      <tbody>
+                        {ocrResult.lineItems.map((li: any, i: number) => (
+                          <tr key={i} className="border-b border-slate-50">
+                            <td className="py-2">{li.description}</td><td className="py-2 text-slate-500">{li.hsn}</td>
+                            <td className="py-2 text-right">{li.qty}</td><td className="py-2 text-right">{li.rate}</td>
+                            <td className="py-2 text-right font-semibold">{li.amount}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Report settings & generate */}
+              <div className="card-base p-6">
+                <h3 className="font-bold text-slate-900 mb-4">Generate Filing Report</h3>
+                <div className="space-y-3 mb-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Report Title</label>
+                    <input type="text" value={ocrResult.reportTitle}
+                      onChange={e => setOcrResult((r: any) => ({ ...r, reportTitle: e.target.value }))}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">CA Notes (optional)</label>
+                    <textarea value={ocrResult.clientNote}
+                      onChange={e => setOcrResult((r: any) => ({ ...r, clientNote: e.target.value }))}
+                      rows={3} placeholder="Add any additional notes for the filing…"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
+                  </div>
+                </div>
+                <button onClick={generateFilingReport}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white font-semibold text-sm rounded-xl hover:bg-emerald-700 transition-colors">
+                  <Download className="w-4 h-4" /> Download Filing Report
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
