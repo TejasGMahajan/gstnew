@@ -668,7 +668,7 @@ export default function AdminDashboardPage() {
                             </button>
                           </div>
                           {applyResult?.id === ov.id && (
-                            <p className="text-xs text-emerald-600 mt-1 font-medium">✓ Updated {applyResult.count} tasks</p>
+                            <p className="text-xs text-emerald-600 mt-1 font-medium">✓ Updated {applyResult?.count} tasks</p>
                           )}
                         </td>
                       </tr>

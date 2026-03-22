@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
         .ilike('task_name', `%${task_type}%`)
         .eq('due_date', original_due_date)
         .is('deleted_at', null)
-        .select('id', { count: 'exact', head: true });
+        .select('id');
 
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

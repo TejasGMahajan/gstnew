@@ -1718,7 +1718,7 @@ ${ocrResult.warnings.length > 0 ? `<h2>Warnings</h2><div class="warn-box">${ocrR
               <select value={ocrClientFilter} onChange={e => setOcrClientFilter(e.target.value)}
                 className="text-xs px-2 py-1 border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500">
                 <option value="all">All clients</option>
-                {[...new Set(ocrDocs.map(d => d.business_name))].map(name => (
+                {Array.from(new Set(ocrDocs.map(d => d.business_name))).map(name => (
                   <option key={name} value={name}>{name}</option>
                 ))}
               </select>
