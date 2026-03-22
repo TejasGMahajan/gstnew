@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  LayoutDashboard, FileText, BarChart3, CreditCard, LogOut,
-  Shield, Users, Settings, ChevronRight, Building2, FileCheck,
-  Bell, Zap, Menu, X,
+  LayoutDashboard, BarChart3, CreditCard, LogOut,
+  Shield, ChevronRight, FileCheck,
+  Menu, X,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
