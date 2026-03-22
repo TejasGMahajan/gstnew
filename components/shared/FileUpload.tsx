@@ -5,7 +5,7 @@ import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { sanitizeFileName } from '@/lib/sanitize';
 import { logUserAction } from '@/lib/api';
-import { UpgradePrompt } from '@/lib/featureGate';
+import { UpgradePrompt } from '@/components/shared/UpgradePrompt';
 import { Upload, FileText, X, CheckCircle, AlertCircle } from 'lucide-react';
 
 const ALLOWED_TYPES = [

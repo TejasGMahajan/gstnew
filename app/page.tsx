@@ -469,8 +469,8 @@ export default function LandingPage() {
                 </li>
               ))}
             </ul>
-            <a href="/pricing" className="block text-center px-4 py-2.5 border border-white/20 text-white text-sm font-semibold rounded-lg hover:bg-white/10 transition-colors">
-              Contact Sales
+            <a href="/signup?role=business_owner" className="block text-center px-4 py-2.5 border border-white/20 text-white text-sm font-semibold rounded-lg hover:bg-white/10 transition-colors">
+              Get Started
             </a>
           </div>
         </div>
