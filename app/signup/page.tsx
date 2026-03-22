@@ -85,19 +85,9 @@ export default function SignupPage() {
         return;
       }
 
-      // 2. Upsert profile (trigger may have already created it from auth metadata)
-      const { error: profileError } = await supabase.from('profiles').upsert({
-        id: authData.user.id,
-        user_type: selectedRole,
-        full_name: sanitizeText(fullName),
-        email: email.toLowerCase().trim(),
-        phone: phone ? sanitizeText(phone) : null,
-      }, { onConflict: 'id' });
-
-      if (profileError) {
-        // Profile upsert failed but auth user was created — log it but don't block signup
-        console.error('[Signup] Profile upsert error:', profileError.message);
-      }
+      // 2. Profile is created automatically by the handle_new_user trigger (SECURITY DEFINER).
+      //    No client-side insert needed — email confirmation sessions are unconfirmed
+      //    and would fail RLS anyway.
 
       // 3. Save pending_ca_id if ca param was present
       if (caParam) {
