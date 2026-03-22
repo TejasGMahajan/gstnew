@@ -98,7 +98,79 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ data: data || [], total: count || 0 });
     }
 
+    if (type === 'deadline_overrides') {
+      const { data } = await supabaseAdmin
+        .from('deadline_overrides')
+        .select('*')
+        .order('created_at', { ascending: false });
+      return NextResponse.json({ data: data || [] });
+    }
+
     return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const isAdmin = await verifyAdmin(req.headers.get('authorization'));
+  if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  try {
+    const body = await req.json();
+    const { action } = body;
+
+    if (action === 'create_override') {
+      const { task_type, original_due_date, extended_due_date, reason, circular_ref } = body;
+      if (!task_type || !original_due_date || !extended_due_date || !reason) {
+        return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      }
+      const { data, error } = await supabaseAdmin
+        .from('deadline_overrides')
+        .insert({ task_type, original_due_date, extended_due_date, reason, circular_ref })
+        .select()
+        .single();
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ data });
+    }
+
+    if (action === 'apply_override') {
+      const { id, task_type, original_due_date, extended_due_date } = body;
+      if (!id || !task_type || !original_due_date || !extended_due_date) {
+        return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+      }
+      // Bulk update all matching compliance_tasks
+      const { count, error } = await supabaseAdmin
+        .from('compliance_tasks')
+        .update({ due_date: extended_due_date })
+        .ilike('task_name', `%${task_type}%`)
+        .eq('due_date', original_due_date)
+        .is('deleted_at', null)
+        .select('id', { count: 'exact', head: true });
+
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      // Update applied_count
+      await supabaseAdmin
+        .from('deadline_overrides')
+        .update({ applied_count: count || 0 })
+        .eq('id', id);
+
+      return NextResponse.json({ updated: count || 0 });
+    }
+
+    if (action === 'delete_override') {
+      const { id } = body;
+      if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+      const { error } = await supabaseAdmin
+        .from('deadline_overrides')
+        .delete()
+        .eq('id', id);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

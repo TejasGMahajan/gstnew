@@ -9,9 +9,9 @@ import StatsCard from '@/components/shared/StatsCard';
 import { SkeletonCard, SkeletonTable } from '@/components/shared/SkeletonCard';
 import StatusBadge from '@/components/shared/StatusBadge';
 import Pagination from '@/components/shared/Pagination';
-import { Users, CreditCard, MessageSquare, Activity, Search, RefreshCw, ShieldAlert } from 'lucide-react';
+import { Users, CreditCard, MessageSquare, Activity, Search, RefreshCw, ShieldAlert, Calendar, Plus, Trash2, CheckCircle2 } from 'lucide-react';
 
-type AdminTab = 'users' | 'subscriptions' | 'wa_credits' | 'audit_logs';
+type AdminTab = 'users' | 'subscriptions' | 'wa_credits' | 'audit_logs' | 'deadlines';
 
 const PAGE_SIZE = 20;
 
@@ -52,6 +52,21 @@ export default function AdminDashboardPage() {
   const [auditPage, setAuditPage] = useState(1);
   const [totalAuditLogs, setTotalAuditLogs] = useState(0);
 
+  // Deadlines tab
+  const [overrides, setOverrides] = useState<any[]>([]);
+  const [overrideLoading, setOverrideLoading] = useState(false);
+  const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [applyResult, setApplyResult] = useState<{ id: string; count: number } | null>(null);
+  const [newOverride, setNewOverride] = useState({
+    task_type: '',
+    original_due_date: '',
+    extended_due_date: '',
+    reason: '',
+    circular_ref: '',
+  });
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+
   // ── Security Check ────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -71,6 +86,21 @@ export default function AdminDashboardPage() {
     const qs = new URLSearchParams(params).toString();
     const res = await fetch(`/api/admin?${qs}`, {
       headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  }, []);
+
+  const adminPost = useCallback(async (body: Record<string, any>) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return null;
+    const res = await fetch('/api/admin', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
     });
     if (!res.ok) return null;
     return res.json();
@@ -130,6 +160,13 @@ export default function AdminDashboardPage() {
     setTotalAuditLogs(data.total || 0);
   }, [auditPage, auditEntityFilter, adminFetch]);
 
+  const loadOverrides = useCallback(async () => {
+    setOverrideLoading(true);
+    const data = await adminFetch({ type: 'deadline_overrides' });
+    setOverrides(data?.data || []);
+    setOverrideLoading(false);
+  }, [adminFetch]);
+
   // ── Main Load ─────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -144,7 +181,8 @@ export default function AdminDashboardPage() {
     if (activeTab === 'subscriptions') loadSubscriptions();
     if (activeTab === 'wa_credits') loadWACredits();
     if (activeTab === 'audit_logs') loadAuditLogs();
-  }, [activeTab, user, profile, loadUsers, loadSubscriptions, loadWACredits, loadAuditLogs]);
+    if (activeTab === 'deadlines') loadOverrides();
+  }, [activeTab, user, profile, loadUsers, loadSubscriptions, loadWACredits, loadAuditLogs, loadOverrides]);
 
   // ── Access Denied Screen ──────────────────────────────────────────────────
 
@@ -172,6 +210,7 @@ export default function AdminDashboardPage() {
     { key: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
     { key: 'wa_credits', label: 'WA Credits', icon: MessageSquare },
     { key: 'audit_logs', label: 'Audit Logs', icon: Activity },
+    { key: 'deadlines', label: 'Deadlines', icon: Calendar },
   ];
 
   return (
@@ -459,6 +498,185 @@ export default function AdminDashboardPage() {
           </div>
           <div className="px-5 pb-4">
             <Pagination page={auditPage} total={totalAuditLogs} pageSize={PAGE_SIZE} onChange={setAuditPage} />
+          </div>
+        </div>
+      )}
+
+      {/* ── Deadlines Tab ── */}
+      {activeTab === 'deadlines' && (
+        <div className="space-y-5">
+          {/* Create Override Form */}
+          <div className="card-base p-5">
+            <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+              <Plus className="w-4 h-4 text-indigo-600" />
+              Add Deadline Extension
+            </h3>
+            {createError && (
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-lg text-sm text-rose-700">{createError}</div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Filing Type</label>
+                <select
+                  value={newOverride.task_type}
+                  onChange={e => setNewOverride(p => ({ ...p, task_type: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Select filing...</option>
+                  <option value="GSTR-1">GSTR-1</option>
+                  <option value="GSTR-3B">GSTR-3B</option>
+                  <option value="GSTR-9">GSTR-9 Annual</option>
+                  <option value="TDS Payment">TDS Payment</option>
+                  <option value="TDS Return">TDS Return</option>
+                  <option value="PF & ESI">PF & ESI</option>
+                  <option value="ITR Filing">ITR Filing</option>
+                  <option value="DIR-3 KYC">DIR-3 KYC</option>
+                  <option value="MSME Form 1">MSME Form 1</option>
+                  <option value="MGT-7">Annual Return (MGT-7)</option>
+                  <option value="AOC-4">Financial Statements (AOC-4)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Original Due Date</label>
+                <input
+                  type="date"
+                  value={newOverride.original_due_date}
+                  onChange={e => setNewOverride(p => ({ ...p, original_due_date: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Extended Due Date</label>
+                <input
+                  type="date"
+                  value={newOverride.extended_due_date}
+                  onChange={e => setNewOverride(p => ({ ...p, extended_due_date: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Circular Reference <span className="text-slate-400 font-normal">(optional)</span></label>
+                <input
+                  type="text"
+                  value={newOverride.circular_ref}
+                  onChange={e => setNewOverride(p => ({ ...p, circular_ref: e.target.value }))}
+                  placeholder="e.g. CBIC Circular 05/2026"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-slate-600 mb-1">Reason</label>
+                <input
+                  type="text"
+                  value={newOverride.reason}
+                  onChange={e => setNewOverride(p => ({ ...p, reason: e.target.value }))}
+                  placeholder="e.g. Extended due to server downtime on GSTN portal"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+            <button
+              disabled={creating || !newOverride.task_type || !newOverride.original_due_date || !newOverride.extended_due_date || !newOverride.reason}
+              onClick={async () => {
+                setCreating(true);
+                setCreateError('');
+                const res = await adminPost({ action: 'create_override', ...newOverride });
+                setCreating(false);
+                if (!res) { setCreateError('Failed to create override.'); return; }
+                setNewOverride({ task_type: '', original_due_date: '', extended_due_date: '', reason: '', circular_ref: '' });
+                loadOverrides();
+              }}
+              className="mt-4 px-5 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {creating ? 'Saving...' : 'Save Override'}
+            </button>
+          </div>
+
+          {/* Overrides Table */}
+          <div className="card-base overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-semibold text-slate-900">Active Overrides</h3>
+              <p className="text-xs text-slate-500">Click "Apply" to update all matching tasks in the database</p>
+            </div>
+            {overrideLoading ? (
+              <div className="px-5 py-12 text-center text-slate-400 text-sm">Loading...</div>
+            ) : overrides.length === 0 ? (
+              <div className="px-5 py-12 text-center text-slate-400 text-sm">No overrides yet. Add one above when the government extends a deadline.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-100">
+                      <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase">Filing</th>
+                      <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase">Original Date</th>
+                      <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase">Extended To</th>
+                      <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase">Reason</th>
+                      <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase">Applied</th>
+                      <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {overrides.map(ov => (
+                      <tr key={ov.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-5 py-3 font-semibold text-slate-800">{ov.task_type}</td>
+                        <td className="px-5 py-3 text-slate-500 text-xs line-through">{new Date(ov.original_due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                        <td className="px-5 py-3 font-semibold text-emerald-600 text-xs">{new Date(ov.extended_due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                        <td className="px-5 py-3 text-slate-600 text-xs max-w-xs">
+                          <div>{ov.reason}</div>
+                          {ov.circular_ref && <div className="text-indigo-600 mt-0.5">{ov.circular_ref}</div>}
+                        </td>
+                        <td className="px-5 py-3">
+                          {ov.applied_count > 0 ? (
+                            <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              {ov.applied_count} tasks
+                            </span>
+                          ) : (
+                            <span className="text-xs text-amber-600 font-medium">Not applied</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-2">
+                            <button
+                              disabled={applyingId === ov.id}
+                              onClick={async () => {
+                                setApplyingId(ov.id);
+                                setApplyResult(null);
+                                const res = await adminPost({
+                                  action: 'apply_override',
+                                  id: ov.id,
+                                  task_type: ov.task_type,
+                                  original_due_date: ov.original_due_date,
+                                  extended_due_date: ov.extended_due_date,
+                                });
+                                setApplyingId(null);
+                                if (res) { setApplyResult({ id: ov.id, count: res.updated }); loadOverrides(); }
+                              }}
+                              className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                            >
+                              {applyingId === ov.id ? 'Applying...' : 'Apply to Tasks'}
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (!confirm('Delete this override?')) return;
+                                await adminPost({ action: 'delete_override', id: ov.id });
+                                loadOverrides();
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          {applyResult?.id === ov.id && (
+                            <p className="text-xs text-emerald-600 mt-1 font-medium">✓ Updated {applyResult.count} tasks</p>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
