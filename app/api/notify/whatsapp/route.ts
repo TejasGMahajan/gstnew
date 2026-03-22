@@ -219,11 +219,13 @@ export async function POST(request: NextRequest) {
   // 6. Deduct 1 credit for paid-plan gated messages
   if (!skipGate && businessId) {
     // Fire-and-forget — don't block the response on a credit deduction failure
-    supabaseAdmin
-      .rpc('deduct_whatsapp_credit', { p_business_id: businessId })
-      .then(({ error }) => {
-        if (error) console.error('[whatsapp/route] credit deduction failed:', error.message);
-      });
+    Promise.resolve(
+      supabaseAdmin.rpc('deduct_whatsapp_credit', { p_business_id: businessId })
+    ).then(({ error }) => {
+      if (error) console.error('[whatsapp/route] credit deduction failed:', error.message);
+    }).catch((err: unknown) => {
+      console.error('[whatsapp/route] credit deduction threw:', err instanceof Error ? err.message : String(err));
+    });
   }
 
   return NextResponse.json({ success: true, messageId });
