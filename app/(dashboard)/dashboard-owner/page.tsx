@@ -131,12 +131,22 @@ export default function DashboardOwnerPage() {
       setBusiness(biz);
 
       // Fetch pending CA invites for this business
-      const { data: invites } = await supabase
+      const { data: inviteRows } = await supabase
         .from('client_relationships')
-        .select('id, status, ca_profile_id, profiles!ca_profile_id(full_name, email)')
+        .select('id, status, ca_profile_id')
         .eq('business_id', biz.id)
         .eq('status', 'pending');
-      setPendingInvites(invites || []);
+      if (inviteRows && inviteRows.length > 0) {
+        const caIds = inviteRows.map((r: any) => r.ca_profile_id);
+        const { data: caProfiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', caIds);
+        const profileMap = Object.fromEntries((caProfiles || []).map((p: any) => [p.id, p]));
+        setPendingInvites(inviteRows.map((r: any) => ({ ...r, profiles: profileMap[r.ca_profile_id] })));
+      } else {
+        setPendingInvites([]);
+      }
 
       // Parallel fetches
       const [tasksRes, docsRes, subRes, storageRes, waRes] = await Promise.allSettled([
