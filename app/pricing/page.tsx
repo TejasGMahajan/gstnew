@@ -289,7 +289,7 @@ export default function PricingPage() {
         {/* Pricing Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-16">
           {PLANS.map((plan) => {
-            const isCurrent = currentPlan === plan.key || (!currentPlan && plan.key === 'free');
+            const isCurrent = !!user && (currentPlan === plan.key || (!currentPlan && plan.key === 'free'));
             const isLower = plan.key === 'free' && currentPlan && currentPlan !== 'free';
 
             return (
