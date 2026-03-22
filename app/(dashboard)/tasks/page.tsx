@@ -9,7 +9,7 @@ import { logUserAction } from '@/lib/api';
 import { SkeletonTable } from '@/components/shared/SkeletonCard';
 import StatusBadge from '@/components/shared/StatusBadge';
 import Pagination from '@/components/shared/Pagination';
-import { UpgradePrompt } from '@/lib/featureGate';
+import { UpgradePrompt } from '@/components/shared/UpgradePrompt';
 import { CheckCircle, Clock, AlertTriangle, TrendingUp, RefreshCw, CalendarDays } from 'lucide-react';
 import type { ComplianceTask } from '@/lib/supabase/types';
 import { transitionTaskStatus } from '@/lib/api';
