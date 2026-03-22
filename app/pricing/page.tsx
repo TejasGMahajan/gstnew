@@ -123,7 +123,7 @@ export default function PricingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [currentPlan, setCurrentPlan] = useState<string | null>(null);
-  useEffect(() => { document.title = 'Pricing — ComplianceHub'; }, []);
+  useEffect(() => { document.title = 'Pricing — Complifile'; }, []);
   const [currentBusinessId, setCurrentBusinessId] = useState<string | null>(null);
   const [paymentLoading, setPaymentLoading] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState('');
@@ -188,7 +188,7 @@ export default function PricingPage() {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: order.amount,
         currency: order.currency || 'INR',
-        name: 'ComplianceHub',
+        name: 'Complifile',
         description: `${planKey.charAt(0).toUpperCase() + planKey.slice(1)} Plan`,
         order_id: order.id,
         prefill: {
@@ -253,7 +253,7 @@ export default function PricingPage() {
               <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
                 <FileCheck className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-slate-900">ComplianceHub</span>
+              <span className="font-bold text-slate-900">Complifile</span>
             </div>
           </div>
           {!user && (
@@ -390,7 +390,7 @@ export default function PricingPage() {
         <div className="text-center mt-12">
           <p className="text-slate-500 text-sm">
             Questions? Email us at{' '}
-            <a href="mailto:support@compliancehub.in" className="text-indigo-600 hover:underline">support@compliancehub.in</a>
+            <a href="mailto:support@complifile.in" className="text-indigo-600 hover:underline">support@complifile.in</a>
           </p>
         </div>
       </div>

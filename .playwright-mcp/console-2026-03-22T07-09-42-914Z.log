@@ -1,0 +1,8 @@
+[  117690ms] [WARNING] @supabase/gotrue-js: Lock "lock:sb-wwjrdungolklrmyizmti-auth-token" was not released within 5000ms. This may indicate an orphaned lock from a component unmount (e.g., React Strict Mode). Forcefully acquiring the lock to recover. @ https://esm.sh/@supabase/auth-js@2.99.3/es2022/auth-js.mjs:2
+[  117694ms] [ERROR] [AuthContext] profile fetch error: AbortError: Lock broken by another request with the 'steal' option. @ https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:0
+[  117696ms] Lock broken by another request with the 'steal' option.
+[  117697ms] Lock broken by another request with the 'steal' option.
+[  117698ms] Lock broken by another request with the 'steal' option.
+[  117698ms] Lock broken by another request with the 'steal' option.
+[  117699ms] Lock broken by another request with the 'steal' option.
+[  117700ms] [ERROR] [AuthContext] profile fetch error: AbortError: Lock broken by another request with the 'steal' option. @ https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:0

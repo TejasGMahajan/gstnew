@@ -344,7 +344,7 @@ function buildPDF(
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `${business.business_name} · ComplianceHub · Confidential`,
+      `${business.business_name} · Complifile · Confidential`,
       ML,
       PH - 5,
     );

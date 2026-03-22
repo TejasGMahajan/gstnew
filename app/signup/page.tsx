@@ -33,10 +33,10 @@ export default function SignupPage() {
   const [error, setError] = useState('');
   const [signedUpEmail, setSignedUpEmail] = useState('');
 
-  useEffect(() => { document.title = 'Sign Up — ComplianceHub'; }, []);
+  useEffect(() => { document.title = 'Sign Up — Complifile'; }, []);
 
   useEffect(() => {
-    document.title = 'Sign Up — ComplianceHub';
+    document.title = 'Sign Up — Complifile';
   }, []);
 
   useEffect(() => {
@@ -117,8 +117,8 @@ export default function SignupPage() {
             <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-600 rounded-xl mb-4">
               <FileCheck className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-slate-900">Join ComplianceHub</h1>
-            <p className="text-slate-500 text-sm mt-1">How will you be using ComplianceHub?</p>
+            <h1 className="text-2xl font-bold text-slate-900">Join Complifile</h1>
+            <p className="text-slate-500 text-sm mt-1">How will you be using Complifile?</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

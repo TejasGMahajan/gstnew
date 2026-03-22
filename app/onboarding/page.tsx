@@ -288,7 +288,7 @@ export default function OnboardingPage() {
             <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
               <FileCheck className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-slate-900">ComplianceHub</span>
+            <span className="text-xl font-bold text-slate-900">Complifile</span>
           </div>
           <p className="text-slate-500 text-sm mt-2">Let's set up your business</p>
         </div>

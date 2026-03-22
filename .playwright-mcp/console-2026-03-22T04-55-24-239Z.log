@@ -1,0 +1,2 @@
+[   21575ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://wwjrdungolklrmyizmti.supabase.co/rest/v1/profiles:0
+[   21576ms] [ERROR] [Signup] Profile insert error: new row violates row-level security policy for table "profiles" @ https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:0

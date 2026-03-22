@@ -17,7 +17,7 @@ export default function LoginPage() {
   const [resendLoading, setResendLoading] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
 
-  useEffect(() => { document.title = 'Sign In — ComplianceHub'; }, []);
+  useEffect(() => { document.title = 'Sign In — Complifile'; }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +72,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-600 rounded-xl mb-4">
             <FileCheck className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">ComplianceHub</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Complifile</h1>
           <p className="text-slate-500 text-sm mt-1">Sign in to your account</p>
         </div>
 
@@ -179,7 +179,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-6">
-          ComplianceHub — GST & Compliance for Indian MSMEs
+          Complifile — GST & Compliance for Indian MSMEs
         </p>
       </div>
     </div>

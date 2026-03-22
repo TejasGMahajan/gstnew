@@ -61,7 +61,7 @@ function buildMessage(messageType: string, data: Record<string, string>): string
 
     case 'ca_invite':
       return (
-        `Your CA ${data.caName} has invited you to ComplianceHub. ` +
+        `Your CA ${data.caName} has invited you to Complifile. ` +
         `Join at: ${data.signupLink}`
       );
 

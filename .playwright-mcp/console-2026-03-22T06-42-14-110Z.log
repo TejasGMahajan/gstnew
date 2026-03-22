@@ -1,0 +1,35 @@
+[    4583ms] [ERROR] Error: supabaseKey is required.
+    at new rr (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/211-2e403c5844896782.js:1:129139)
+    at nr (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/211-2e403c5844896782.js:1:132974)
+    at 58103 (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/app/(dashboard)/tasks/page-a2ffcf23d4a5b9f9.js:1:13071)
+    at n (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/webpack-bf59ab7855d1b726.js:1:149)
+    at 93274 (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/app/(dashboard)/tasks/page-a2ffcf23d4a5b9f9.js:1:1065)
+    at n (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/webpack-bf59ab7855d1b726.js:1:149)
+    at w (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:84085)
+    at E (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:83353)
+    at https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:87452 @ https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:0
+[    4581ms] Error: Minified React error #423; visit https://reactjs.org/docs/error-decoder.html?invariant=423 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at no (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/fd9d1056-e3d23dc4d27083e1.js:1:114195)
+    at lu (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/fd9d1056-e3d23dc4d27083e1.js:1:97319)
+    at nu (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/fd9d1056-e3d23dc4d27083e1.js:1:97248)
+    at tu (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/fd9d1056-e3d23dc4d27083e1.js:1:97066)
+    at $o (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/fd9d1056-e3d23dc4d27083e1.js:1:94317)
+    at Bo (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/fd9d1056-e3d23dc4d27083e1.js:1:93758)
+    at MessagePort.w (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:99973)
+[    4582ms] Error: supabaseKey is required.
+    at new rr (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/211-2e403c5844896782.js:1:129139)
+    at nr (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/211-2e403c5844896782.js:1:132974)
+    at 58103 (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/app/(dashboard)/tasks/page-a2ffcf23d4a5b9f9.js:1:13071)
+    at n (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/webpack-bf59ab7855d1b726.js:1:149)
+    at 93274 (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/app/(dashboard)/tasks/page-a2ffcf23d4a5b9f9.js:1:1065)
+    at n (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/webpack-bf59ab7855d1b726.js:1:149)
+    at w (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:84085)
+    at E (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:83353)
+    at https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:87452
+[    4583ms] Error: supabaseKey is required.
+    at new rr (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/211-2e403c5844896782.js:1:129139)
+    at nr (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/211-2e403c5844896782.js:1:132974)
+    at 58103 (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/app/(dashboard)/tasks/page-a2ffcf23d4a5b9f9.js:1:13071)
+    at n (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/webpack-bf59ab7855d1b726.js:1:149)
+    at 93274 (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/app/(dashboard)/tasks/page-a2ffcf23d4a5b9f9.js:1:1065)
+    at n (https://main--unrivaled-treacle-b65709.netlify.app/_next/static/chunks/webpack-bf59ab7855d1b726.js:1:149)

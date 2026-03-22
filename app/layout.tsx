@@ -4,7 +4,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 
 export const metadata: Metadata = {
-  title: 'ComplianceHub — GST & ROC for Indian MSMEs',
+  title: 'Complifile — GST & ROC for Indian MSMEs',
   description: 'India\'s most trusted compliance management platform for chartered accountants and business owners.',
 };
 

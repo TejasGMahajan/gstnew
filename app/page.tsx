@@ -64,7 +64,7 @@ export default function LandingPage() {
               <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
                 <FileCheck className="w-5 h-5 text-white" />
               </div>
-              <span className="text-lg font-bold text-white">ComplianceHub</span>
+              <span className="text-lg font-bold text-white">Complifile</span>
             </div>
 
             {/* Desktop Nav */}
@@ -155,7 +155,7 @@ export default function LandingPage() {
 
           <p className="mt-6 text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
             Indian MSMEs face <strong className="text-white">998 legal obligations per year</strong>. ClearTax and Zoho
-            abandoned small businesses. ComplianceHub gives your CA a mission control — and you peace of mind.
+            abandoned small businesses. Complifile gives your CA a mission control — and you peace of mind.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
@@ -249,7 +249,7 @@ export default function LandingPage() {
       <section id="features" className="py-20 bg-white/3 border-y border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white">The 4 Pillars of ComplianceHub</h2>
+            <h2 className="text-3xl font-bold text-white">The 4 Pillars of Complifile</h2>
             <p className="mt-3 text-slate-400">Everything your CA needs. Everything you've been missing.</p>
           </div>
 
@@ -492,7 +492,7 @@ export default function LandingPage() {
                 <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
                   <FileCheck className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-lg font-bold text-white">ComplianceHub</span>
+                <span className="text-lg font-bold text-white">Complifile</span>
               </div>
               <p className="text-slate-500 text-sm leading-relaxed">
                 Made for Indian MSMEs. Built with ❤ for the 70 million small businesses that keep India running.
@@ -541,7 +541,7 @@ export default function LandingPage() {
           </div>
 
           <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-slate-500 text-sm">© 2026 ComplianceHub. All rights reserved.</p>
+            <p className="text-slate-500 text-sm">© 2026 Complifile. All rights reserved.</p>
             <p className="text-slate-500 text-sm">Made for Indian MSMEs 🇮🇳</p>
           </div>
         </div>

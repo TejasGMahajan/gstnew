@@ -65,7 +65,7 @@ export default function Sidebar() {
             <FileCheck className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="text-white font-bold text-sm leading-none">ComplianceHub</p>
+            <p className="text-white font-bold text-sm leading-none">Complifile</p>
             <p className="text-slate-400 text-xs mt-0.5">GST · ROC · PF-ESI</p>
           </div>
         </div>

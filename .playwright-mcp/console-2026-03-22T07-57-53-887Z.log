@@ -1,0 +1,48 @@
+[    3090ms] [ERROR] Failed to fetch RSC payload. Falling back to browser navigation. TypeError: Failed to fetch
+    at s (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:41965)
+    at https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:57240
+    at Object.task (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:29941)
+    at c.s (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:30634)
+    at c.enqueue (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:30053)
+    at s (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:57202)
+    at f (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:66407)
+    at https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:71296
+    at Object.tl [as useReducer] (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/fd9d1056-e3d23dc4d27083e1.js:1:41770)
+    at t.useReducer (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:97903) @ https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:0
+[    3193ms] Error: supabaseKey is required.
+    at new rr (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/211-2e403c5844896782.js:1:129139)
+    at nr (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/211-2e403c5844896782.js:1:132974)
+    at 58103 (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/app/(dashboard)/tasks/page-a2ffcf23d4a5b9f9.js:1:13071)
+    at n (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/webpack-bf59ab7855d1b726.js:1:149)
+    at 93274 (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/app/(dashboard)/tasks/page-a2ffcf23d4a5b9f9.js:1:1065)
+    at n (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/webpack-bf59ab7855d1b726.js:1:149)
+[    3187ms] [ERROR] Error: supabaseKey is required.
+    at new rr (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/211-2e403c5844896782.js:1:129139)
+    at nr (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/211-2e403c5844896782.js:1:132974)
+    at 58103 (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/app/(dashboard)/tasks/page-a2ffcf23d4a5b9f9.js:1:13071)
+    at n (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/webpack-bf59ab7855d1b726.js:1:149)
+    at 93274 (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/app/(dashboard)/tasks/page-a2ffcf23d4a5b9f9.js:1:1065)
+    at n (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/webpack-bf59ab7855d1b726.js:1:149)
+    at w (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:84085)
+    at A (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:85675)
+    at Object.<anonymous> (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:86482)
+    at JSON.parse (<anonymous>) @ https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:0
+[    3198ms] Error: Minified React error #423; visit https://reactjs.org/docs/error-decoder.html?invariant=423 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at no (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/fd9d1056-e3d23dc4d27083e1.js:1:114195)
+    at lu (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/fd9d1056-e3d23dc4d27083e1.js:1:97319)
+    at nu (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/fd9d1056-e3d23dc4d27083e1.js:1:97248)
+    at tu (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/fd9d1056-e3d23dc4d27083e1.js:1:97066)
+    at $o (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/fd9d1056-e3d23dc4d27083e1.js:1:94317)
+    at Bo (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/fd9d1056-e3d23dc4d27083e1.js:1:93758)
+    at MessagePort.w (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:99973)
+[    3199ms] Error: supabaseKey is required.
+    at new rr (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/211-2e403c5844896782.js:1:129139)
+    at nr (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/211-2e403c5844896782.js:1:132974)
+    at 58103 (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/app/(dashboard)/tasks/page-a2ffcf23d4a5b9f9.js:1:13071)
+    at n (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/webpack-bf59ab7855d1b726.js:1:149)
+    at 93274 (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/app/(dashboard)/tasks/page-a2ffcf23d4a5b9f9.js:1:1065)
+    at n (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/webpack-bf59ab7855d1b726.js:1:149)
+    at w (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:84085)
+    at A (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:85675)
+    at Object.<anonymous> (https://unrivaled-treacle-b65709.netlify.app/_next/static/chunks/864-7abe85c7e1311ce2.js:1:86482)
+    at JSON.parse (<anonymous>)
