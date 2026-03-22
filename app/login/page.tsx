@@ -1,7 +1,7 @@
 // FILE: app/login/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { FileCheck, Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
@@ -16,6 +16,8 @@ export default function LoginPage() {
   const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
+
+  useEffect(() => { document.title = 'Sign In — ComplianceHub'; }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,6 +145,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

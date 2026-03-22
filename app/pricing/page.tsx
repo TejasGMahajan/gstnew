@@ -123,6 +123,7 @@ export default function PricingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+  useEffect(() => { document.title = 'Pricing — ComplianceHub'; }, []);
   const [currentBusinessId, setCurrentBusinessId] = useState<string | null>(null);
   const [paymentLoading, setPaymentLoading] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState('');
