@@ -30,6 +30,7 @@ export default function SignupPage() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [signedUpEmail, setSignedUpEmail] = useState('');
@@ -63,6 +64,7 @@ export default function SignupPage() {
     const pwError = validatePassword(password);
     if (pwError) { setError(pwError); return; }
     if (!selectedRole) { setError('Please select a role.'); return; }
+    if (!agreedToTerms) { setError('Please agree to the Terms of Service and Privacy Policy.'); return; }
 
     setLoading(true);
     try {
@@ -327,10 +329,27 @@ export default function SignupPage() {
               <p className="text-xs text-slate-400 mt-1">Must be at least 8 characters</p>
             </div>
 
+            {/* Terms checkbox */}
+            <div className="flex items-start gap-3 pt-1">
+              <input
+                id="agree-terms"
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer flex-shrink-0"
+              />
+              <label htmlFor="agree-terms" className="text-xs text-slate-600 leading-relaxed cursor-pointer">
+                I have read and agree to the{' '}
+                <a href="/terms" target="_blank" className="text-indigo-600 font-semibold hover:underline">Terms of Service</a>
+                {' '}and{' '}
+                <a href="/privacy" target="_blank" className="text-indigo-600 font-semibold hover:underline">Privacy Policy</a>
+              </label>
+            </div>
+
             {/* Submit */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !agreedToTerms}
               className="w-full py-2.5 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed text-sm mt-2"
             >
               {loading ? (
@@ -342,9 +361,6 @@ export default function SignupPage() {
             </button>
           </form>
 
-          <p className="text-center text-xs text-slate-500 mt-5">
-            By creating an account, you agree to our Terms of Service and Privacy Policy.
-          </p>
 
           <div className="mt-4 pt-4 border-t border-slate-100 text-center">
             <p className="text-sm text-slate-500">

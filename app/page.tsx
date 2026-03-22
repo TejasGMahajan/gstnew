@@ -524,9 +524,13 @@ export default function LandingPage() {
             <div>
               <h4 className="text-sm font-semibold text-white mb-4">Legal</h4>
               <ul className="space-y-2">
-                {['Privacy Policy', 'Terms of Service', 'Refund Policy'].map(link => (
-                  <li key={link}>
-                    <a href="#" className="text-sm text-slate-500 hover:text-slate-300 transition-colors">{link}</a>
+                {[
+                  { label: 'Privacy Policy', href: '/privacy' },
+                  { label: 'Terms of Service', href: '/terms' },
+                  { label: 'Refund Policy', href: '/terms#6' },
+                ].map(link => (
+                  <li key={link.label}>
+                    <a href={link.href} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">{link.label}</a>
                   </li>
                 ))}
               </ul>
