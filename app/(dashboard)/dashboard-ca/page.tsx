@@ -480,7 +480,7 @@ export default function DashboardCAPage() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
           },
-          body: JSON.stringify({ taskId: task.id, businessName: task.business_name }),
+          body: JSON.stringify({ taskId: task.id, businessId: task.business_id }),
         });
         if (res.ok) {
           alert(`WhatsApp reminder sent to ${task.business_name}!`);
