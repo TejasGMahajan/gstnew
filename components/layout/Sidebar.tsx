@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   LayoutDashboard, BarChart3, CreditCard, LogOut,
-  Shield, ChevronRight, FileCheck,
+  Shield, ChevronRight, FileCheck, Settings,
   Menu, X,
 } from 'lucide-react';
 import { Logo } from '@/components/shared/Logo';
@@ -25,11 +25,13 @@ const ownerNav: NavItem[] = [
   { label: 'Document Vault',  href: '/vault',           icon: Shield },
   { label: 'Analytics',       href: '/analytics',       icon: BarChart3 },
   { label: 'Pricing & Plans', href: '/pricing',         icon: CreditCard },
+  { label: 'Settings',        href: '/settings',        icon: Settings },
 ];
 
 const caNav: NavItem[] = [
   { label: 'Client Dashboard', href: '/dashboard-ca',  icon: LayoutDashboard },
   { label: 'Analytics',        href: '/analytics',     icon: BarChart3 },
+  { label: 'Settings',         href: '/settings',      icon: Settings },
 ];
 
 const adminNav: NavItem[] = [

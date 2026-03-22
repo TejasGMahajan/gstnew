@@ -1382,7 +1382,7 @@ export default function DashboardCAPage() {
               <p className="text-xs text-slate-500 mb-2"><strong>Calculation basis:</strong> {penResult.breakdown}</p>
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl mb-4">
                 <p className="text-xs text-amber-800">
-                  <strong>Disclaimer:</strong> This is an estimate only. Actual penalties may vary based on specific circumstances, notifications, and amendments. Consult your CA for accurate figures.
+                  <strong>Disclaimer:</strong> This is an estimate only. Actual penalties may vary based on specific circumstances, notifications, and amendments.
                 </p>
               </div>
               <div>

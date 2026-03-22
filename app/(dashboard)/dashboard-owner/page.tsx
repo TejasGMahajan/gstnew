@@ -244,13 +244,13 @@ export default function DashboardOwnerPage() {
 
       {/* ── Action Required Banner ── */}
       {business && !business.gstin && (
-        <div className="mb-4 flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+        <a href="/settings" className="mb-4 flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors">
           <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
           <div className="flex-1">
-            <p className="text-sm font-semibold text-amber-900">Add your GSTIN in settings</p>
+            <p className="text-sm font-semibold text-amber-900">Add your GSTIN in settings →</p>
             <p className="text-xs text-amber-700 mt-0.5">Your compliance calendar may be incomplete without GSTIN.</p>
           </div>
-        </div>
+        </a>
       )}
 
       {/* ── Page Header ── */}

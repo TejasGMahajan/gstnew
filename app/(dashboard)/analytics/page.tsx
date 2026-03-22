@@ -37,7 +37,7 @@ function StatCard({ label, value, sub, color }: { label: string; value: string |
 
 export default function AnalyticsPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
 
   const [business, setBusiness] = useState<any>(null);
   const [tasks, setTasks] = useState<any[]>([]);
@@ -81,8 +81,13 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/login');
-    if (!authLoading && user) loadData();
-  }, [authLoading, user, loadData, router]);
+    if (!authLoading && user) {
+      const type = profile?.user_type;
+      if (type === 'admin') { router.replace('/dashboard-admin'); return; }
+      if (type === 'chartered_accountant') { router.replace('/dashboard-ca'); return; }
+      loadData();
+    }
+  }, [authLoading, user, profile, loadData, router]);
 
   // ── Chart Data Computation ───────────────────────────────────────────────
 

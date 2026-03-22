@@ -222,7 +222,7 @@ export default function AdminDashboardPage() {
           <p className="text-sm text-slate-500 mt-1">System overview and management</p>
         </div>
         <button
-          onClick={() => { loadStats(); if (activeTab === 'users') loadUsers(); if (activeTab === 'subscriptions') loadSubscriptions(); if (activeTab === 'wa_credits') loadWACredits(); if (activeTab === 'audit_logs') loadAuditLogs(); }}
+          onClick={() => { loadStats(); if (activeTab === 'users') loadUsers(); if (activeTab === 'subscriptions') loadSubscriptions(); if (activeTab === 'wa_credits') loadWACredits(); if (activeTab === 'audit_logs') loadAuditLogs(); if (activeTab === 'deadlines') loadOverrides(); }}
           className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
         >
           <RefreshCw className="w-4 h-4" />
