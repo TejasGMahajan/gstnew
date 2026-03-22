@@ -311,20 +311,25 @@ export default function OnboardingPage() {
 
               <form onSubmit={handleStep1} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Business Name *</label>
+                  <label htmlFor="biz-name" className="block text-sm font-medium text-slate-700 mb-1.5">Business Name *</label>
                   <input
+                    id="biz-name"
+                    name="business_name"
                     type="text"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
                     required
+                    autoComplete="organization"
                     placeholder="Sharma Traders Pvt. Ltd."
                     className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Business Type *</label>
+                  <label htmlFor="biz-type" className="block text-sm font-medium text-slate-700 mb-1.5">Business Type *</label>
                   <select
+                    id="biz-type"
+                    name="business_type"
                     value={businessType}
                     onChange={(e) => setBusinessType(e.target.value)}
                     required
@@ -340,10 +345,12 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  <label htmlFor="biz-address" className="block text-sm font-medium text-slate-700 mb-1.5">
                     Business Address <span className="text-slate-400 font-normal">(optional)</span>
                   </label>
                   <textarea
+                    id="biz-address"
+                    name="address"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     rows={3}
@@ -378,10 +385,12 @@ export default function OnboardingPage() {
 
               <form onSubmit={handleStep2} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  <label htmlFor="biz-gstin" className="block text-sm font-medium text-slate-700 mb-1.5">
                     GSTIN <span className="text-slate-400 font-normal">(optional)</span>
                   </label>
                   <input
+                    id="biz-gstin"
+                    name="gstin"
                     type="text"
                     value={gstin}
                     onChange={(e) => { setGstin(e.target.value.toUpperCase()); setGstinError(''); }}
@@ -394,10 +403,12 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  <label htmlFor="biz-pan" className="block text-sm font-medium text-slate-700 mb-1.5">
                     PAN <span className="text-slate-400 font-normal">(optional)</span>
                   </label>
                   <input
+                    id="biz-pan"
+                    name="pan"
                     type="text"
                     value={pan}
                     onChange={(e) => { setPan(e.target.value.toUpperCase()); setPanError(''); }}
@@ -409,8 +420,10 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Annual Turnover Bracket *</label>
+                  <label htmlFor="biz-turnover" className="block text-sm font-medium text-slate-700 mb-1.5">Annual Turnover Bracket *</label>
                   <select
+                    id="biz-turnover"
+                    name="turnover_bracket"
                     value={turnoverBracket}
                     onChange={(e) => setTurnoverBracket(e.target.value)}
                     required
