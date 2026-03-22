@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabaseAdmin } from '@/lib/supabase/admin';
+import { supabase } from '@/lib/supabase/client';
 import StatsCard from '@/components/shared/StatsCard';
 import { SkeletonCard, SkeletonTable } from '@/components/shared/SkeletonCard';
 import StatusBadge from '@/components/shared/StatusBadge';
@@ -63,98 +63,72 @@ export default function AdminDashboardPage() {
     }
   }, [user, profile, authLoading, router]);
 
+  // ── Admin API helper ──────────────────────────────────────────────────────
+
+  const adminFetch = useCallback(async (params: Record<string, string>) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return null;
+    const qs = new URLSearchParams(params).toString();
+    const res = await fetch(`/api/admin?${qs}`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  }, []);
+
   // ── Load Stats ────────────────────────────────────────────────────────────
 
   const loadStats = useCallback(async () => {
-    const [usersRes, bizRes, subRes] = await Promise.allSettled([
-      supabaseAdmin.from('profiles').select('id', { count: 'exact', head: true }),
-      supabaseAdmin.from('businesses').select('id', { count: 'exact', head: true }),
-      supabaseAdmin.from('subscriptions').select('amount_paid, status').eq('status', 'active'),
-    ]);
-
-    if (usersRes.status === 'fulfilled') setTotalUsers(usersRes.value.count || 0);
-    if (bizRes.status === 'fulfilled') setTotalBusinesses(bizRes.value.count || 0);
-    if (subRes.status === 'fulfilled' && subRes.value.data) {
-      setActiveSubscriptions(subRes.value.data.length);
-      setTotalRevenue(subRes.value.data.reduce((sum: number, s: any) => sum + (s.amount_paid || 0), 0));
-    }
-  }, []);
+    const data = await adminFetch({ type: 'stats' });
+    if (!data) return;
+    setTotalUsers(data.totalUsers);
+    setTotalBusinesses(data.totalBusinesses);
+    setActiveSubscriptions(data.activeSubscriptions);
+    setTotalRevenue(data.totalRevenue);
+  }, [adminFetch]);
 
   // ── Load Users Tab ────────────────────────────────────────────────────────
 
   const loadUsers = useCallback(async () => {
-    const start = (userPage - 1) * PAGE_SIZE;
-
-    let query = supabaseAdmin
-      .from('profiles')
-      .select('id, full_name, email, user_type, created_at', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(start, start + PAGE_SIZE - 1);
-
-    if (userSearch) query = query.ilike('email', `%${userSearch}%`);
-    if (userTypeFilter) query = query.eq('user_type', userTypeFilter);
-
-    const { data, count } = await query;
-    setUsers(data || []);
-    setTotalUsersFiltered(count || 0);
-  }, [userPage, userSearch, userTypeFilter]);
+    const params: Record<string, string> = { type: 'users', page: String(userPage) };
+    if (userSearch) params.search = userSearch;
+    if (userTypeFilter) params.filter = userTypeFilter;
+    const data = await adminFetch(params);
+    if (!data) return;
+    setUsers(data.data || []);
+    setTotalUsersFiltered(data.total || 0);
+  }, [userPage, userSearch, userTypeFilter, adminFetch]);
 
   // ── Load Subscriptions Tab ────────────────────────────────────────────────
 
   const loadSubscriptions = useCallback(async () => {
-    const start = (subPage - 1) * PAGE_SIZE;
-
-    let query = supabaseAdmin
-      .from('subscriptions')
-      .select(`
-        id, plan_type, status, amount_paid, created_at, razorpay_order_id,
-        businesses (business_name)
-      `, { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(start, start + PAGE_SIZE - 1);
-
-    if (subPlanFilter) query = query.eq('plan_type', subPlanFilter);
-
-    const { data, count } = await query;
-    setSubscriptions(data || []);
-    setTotalSubs(count || 0);
-  }, [subPage, subPlanFilter]);
+    const params: Record<string, string> = { type: 'subscriptions', page: String(subPage) };
+    if (subPlanFilter) params.filter = subPlanFilter;
+    const data = await adminFetch(params);
+    if (!data) return;
+    setSubscriptions(data.data || []);
+    setTotalSubs(data.total || 0);
+  }, [subPage, subPlanFilter, adminFetch]);
 
   // ── Load WA Credits Tab ───────────────────────────────────────────────────
 
   const loadWACredits = useCallback(async () => {
     setWaLoading(true);
-    const { data } = await supabaseAdmin
-      .from('whatsapp_credits')
-      .select(`
-        id, credits_remaining, credits_total, updated_at,
-        businesses (business_name)
-      `)
-      .order('credits_remaining', { ascending: true });
-    setWaCredits(data || []);
+    const data = await adminFetch({ type: 'wa_credits' });
+    setWaCredits(data?.data || []);
     setWaLoading(false);
-  }, []);
+  }, [adminFetch]);
 
   // ── Load Audit Logs Tab ───────────────────────────────────────────────────
 
   const loadAuditLogs = useCallback(async () => {
-    const start = (auditPage - 1) * PAGE_SIZE;
-
-    let query = supabaseAdmin
-      .from('audit_logs')
-      .select(`
-        id, action, entity_type, entity_id, description, created_at,
-        profiles (email)
-      `, { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(start, start + PAGE_SIZE - 1);
-
-    if (auditEntityFilter) query = query.eq('entity_type', auditEntityFilter);
-
-    const { data, count } = await query;
-    setAuditLogs(data || []);
-    setTotalAuditLogs(count || 0);
-  }, [auditPage, auditEntityFilter]);
+    const params: Record<string, string> = { type: 'audit_logs', page: String(auditPage) };
+    if (auditEntityFilter) params.filter = auditEntityFilter;
+    const data = await adminFetch(params);
+    if (!data) return;
+    setAuditLogs(data.data || []);
+    setTotalAuditLogs(data.total || 0);
+  }, [auditPage, auditEntityFilter, adminFetch]);
 
   // ── Main Load ─────────────────────────────────────────────────────────────
 
