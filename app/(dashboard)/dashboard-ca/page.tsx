@@ -64,7 +64,7 @@ const TABS: { key: TabKey; label: string; icon: typeof Users }[] = [
   { key: 'reports', label: 'Reports', icon: BarChart2 },
 ];
 
-const PIPELINE_STATUSES = ['created', 'awaiting_documents', 'under_review', 'ready_to_file', 'filed', 'acknowledged'] as const;
+const PIPELINE_STATUSES = ['created', 'awaiting_documents', 'under_review', 'ready_to_file', 'filed', 'acknowledged', 'locked'] as const;
 const PIPELINE_LABELS: Record<string, string> = {
   created: 'Created',
   awaiting_documents: 'Awaiting Docs',
@@ -72,6 +72,7 @@ const PIPELINE_LABELS: Record<string, string> = {
   ready_to_file: 'Ready to File',
   filed: 'Filed',
   acknowledged: 'Acknowledged',
+  locked: 'Locked',
 };
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -935,7 +936,7 @@ export default function DashboardCAPage() {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto">
+          <div className="grid grid-cols-2 lg:grid-cols-7 gap-4 overflow-x-auto">
             {PIPELINE_STATUSES.map(col => {
               const colTasks = pipelineTasks.filter(t => t.status === col);
               return (
