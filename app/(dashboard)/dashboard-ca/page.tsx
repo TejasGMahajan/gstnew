@@ -426,24 +426,41 @@ export default function DashboardCAPage() {
     setInviteLoading(true);
     setInviteResult('');
     try {
-      // Check if user exists
+      // Step 1: find profile by email
       const { data: existingProfile } = await supabase
         .from('profiles')
-        .select('id, user_type, businesses(id)')
+        .select('id, user_type')
         .eq('email', inviteEmail.toLowerCase().trim())
         .maybeSingle();
 
       if (existingProfile) {
-        // Link directly
-        const businessId = (existingProfile as any).businesses?.[0]?.id;
-        if (businessId) {
-          await supabase.from('client_relationships').insert({
-            ca_profile_id: user.id,
-            business_id: businessId,
-            status: 'pending',
-          });
-          setInviteResult(`Invite sent to ${inviteEmail}. They will see it on their dashboard.`);
-          loadClients();
+        // Step 2: find their business separately
+        const { data: biz } = await supabase
+          .from('businesses')
+          .select('id')
+          .eq('owner_id', existingProfile.id)
+          .maybeSingle();
+
+        if (biz?.id) {
+          // Check if invite already exists
+          const { data: existing } = await supabase
+            .from('client_relationships')
+            .select('id, status')
+            .eq('ca_profile_id', user.id)
+            .eq('business_id', biz.id)
+            .maybeSingle();
+
+          if (existing) {
+            setInviteResult(`An invite already exists for ${inviteEmail} (status: ${existing.status}).`);
+          } else {
+            await supabase.from('client_relationships').insert({
+              ca_profile_id: user.id,
+              business_id: biz.id,
+              status: 'pending',
+            });
+            setInviteResult(`Invite sent to ${inviteEmail}. They will see it on their dashboard.`);
+            loadClients();
+          }
         } else {
           setInviteResult(`User found but has no business yet. Share your invite link so they can sign up.`);
         }
