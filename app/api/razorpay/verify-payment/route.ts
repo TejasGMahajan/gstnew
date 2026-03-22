@@ -11,8 +11,9 @@ export async function POST(request: NextRequest) {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
-      business_id
     } = body;
+    // Pricing page sends businessId (camelCase); accept both forms
+    const business_id: string = body.business_id ?? body.businessId;
 
     if (!process.env.RAZORPAY_KEY_SECRET) {
       return NextResponse.json(
