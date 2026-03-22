@@ -144,19 +144,14 @@ export default function FileUpload({ businessId, userId, category, onUploadCompl
 
       setProgress(70);
 
-      // 4. Get public URL
-      const { data: urlData } = supabase.storage.from('documents').getPublicUrl(storagePath);
-      const fileUrl = urlData.publicUrl;
-
       setProgress(85);
 
-      // 5. Insert document record
+      // 4. Insert document record (file_url omitted — access via signed URL using storage_path)
       const { data: docData, error: docError } = await supabase
         .from('documents')
         .insert({
           business_id: businessId,
           file_name: safeFileName,
-          file_url: fileUrl,
           storage_path: storagePath,
           file_type: selectedFile.type || selectedFile.name.split('.').pop() || 'unknown',
           file_size: selectedFile.size,

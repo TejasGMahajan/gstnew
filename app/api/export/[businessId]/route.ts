@@ -424,8 +424,22 @@ export async function GET(
     return NextResponse.json({ error: 'Business not found' }, { status: 404 });
   }
 
-  // 5. Build PDF and return
+  // 5. Build PDF
   const pdfBuffer = buildPDF(business, tasks ?? [], documents ?? []);
+
+  // 6. Audit log the export (fire-and-forget)
+  Promise.resolve(
+    supabaseAdmin.from('audit_logs').insert({
+      business_id: businessId,
+      user_id: caller.userId,
+      entity_type: 'business',
+      entity_id: businessId,
+      action: 'exported',
+      description: `Compliance report exported for ${business.business_name}`,
+    })
+  ).catch((err: unknown) => {
+    console.error('[export] audit log failed:', err instanceof Error ? err.message : String(err));
+  });
 
   const safeName = business.business_name
     .replace(/\s+/g, '_')
