@@ -1,0 +1,11 @@
+<svg width="160" height="40" viewBox="0 0 160 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Icon -->
+  <rect width="40" height="40" rx="10" fill="#4f46e5"/>
+  <path d="M11 8h11.5L28 13.5V32a1.5 1.5 0 01-1.5 1.5H11A1.5 1.5 0 019.5 32V9.5A1.5 1.5 0 0111 8z" fill="white" fill-opacity="0.15"/>
+  <path d="M11 8h11.5L28 13.5V32a1.5 1.5 0 01-1.5 1.5H11A1.5 1.5 0 019.5 32V9.5A1.5 1.5 0 0111 8z" stroke="white" stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="M22.5 8v5.5H28" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14.5 23l3 3 6.5-6.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Wordmark -->
+  <text x="50" y="27" font-family="Inter, -apple-system, sans-serif" font-weight="800" font-size="20" letter-spacing="-0.5" fill="#1e293b">compli</text>
+  <text x="104" y="27" font-family="Inter, -apple-system, sans-serif" font-weight="800" font-size="20" letter-spacing="-0.5" fill="#4f46e5">file</text>
+</svg>

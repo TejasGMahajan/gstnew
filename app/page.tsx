@@ -5,10 +5,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  Calendar, FileCheck, Bell, Users, ShieldCheck, TrendingUp,
+  Calendar, Bell, Users, ShieldCheck, TrendingUp,
   AlertTriangle, FolderOpen, Clock, CheckCircle, ArrowRight,
   ChevronRight, Star, Menu, X
 } from 'lucide-react';
+import { Logo } from '@/components/shared/Logo';
 
 // ─── Animated Counter ────────────────────────────────────────────────────────
 
@@ -60,12 +61,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                <FileCheck className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-lg font-bold text-white">Complifile</span>
-            </div>
+            <Logo size={32} dark />
 
             {/* Desktop Nav */}
             <div className="hidden md:flex items-center gap-6">
@@ -488,11 +484,8 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
             {/* Brand */}
             <div className="md:col-span-1">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                  <FileCheck className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-lg font-bold text-white">Complifile</span>
+              <div className="mb-4">
+                <Logo size={32} dark />
               </div>
               <p className="text-slate-500 text-sm leading-relaxed">
                 Made for Indian MSMEs. Built with ❤ for the 70 million small businesses that keep India running.

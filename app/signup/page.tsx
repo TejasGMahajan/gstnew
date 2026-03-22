@@ -6,9 +6,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { sanitizeText } from '@/lib/sanitize';
 import {
-  FileCheck, Building2, UserCheck, ArrowLeft, Eye, EyeOff,
+  Building2, UserCheck, ArrowLeft, Eye, EyeOff,
   CheckCircle, AlertCircle, Mail, User, Phone, Lock
 } from 'lucide-react';
+import { Logo } from '@/components/shared/Logo';
 
 type Role = 'business_owner' | 'chartered_accountant' | null;
 
@@ -114,8 +115,8 @@ export default function SignupPage() {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
         <div className="w-full max-w-lg">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-600 rounded-xl mb-4">
-              <FileCheck className="w-7 h-7 text-white" />
+            <div className="flex justify-center mb-3">
+              <Logo size={44} />
             </div>
             <h1 className="text-2xl font-bold text-slate-900">Join Complifile</h1>
             <p className="text-slate-500 text-sm mt-1">How will you be using Complifile?</p>
@@ -198,8 +199,8 @@ export default function SignupPage() {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-600 rounded-xl mb-4">
-            <FileCheck className="w-7 h-7 text-white" />
+          <div className="flex justify-center mb-3">
+            <Logo size={44} />
           </div>
           <h1 className="text-2xl font-bold text-slate-900">
             {selectedRole === 'chartered_accountant' ? 'Create CA Account' : 'Create Business Account'}

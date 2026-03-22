@@ -8,6 +8,7 @@ import {
   Shield, ChevronRight, FileCheck,
   Menu, X,
 } from 'lucide-react';
+import { Logo } from '@/components/shared/Logo';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -60,15 +61,7 @@ export default function Sidebar() {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="px-6 py-5 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">
-            <FileCheck className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <p className="text-white font-bold text-sm leading-none">Complifile</p>
-            <p className="text-slate-400 text-xs mt-0.5">GST · ROC · PF-ESI</p>
-          </div>
-        </div>
+        <Logo size={34} dark tagline />
       </div>
 
       {/* User badge */}

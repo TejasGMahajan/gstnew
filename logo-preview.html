@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Complifile — Logo Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #f1f5f9; padding: 40px; }
+  h2 { font-size: 13px; font-weight: 600; color: #64748b; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 20px; margin-top: 40px; }
+  h2:first-child { margin-top: 0; }
+  .grid { display: flex; flex-wrap: wrap; gap: 24px; align-items: center; }
+  .card { background: white; border-radius: 16px; padding: 32px; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .card.dark { background: #0f172a; }
+  .card.indigo { background: #4f46e5; }
+  .card.gradient { background: linear-gradient(135deg, #4f46e5, #6366f1); }
+  .wordmark { display: flex; align-items: center; gap: 10px; }
+  .wordmark span { font-weight: 800; font-size: 22px; letter-spacing: -0.5px; }
+  .wordmark span .compl { color: #1e293b; }
+  .wordmark span .file { color: #4f46e5; }
+  .wordmark-white span .compl { color: white; }
+  .wordmark-white span .file { color: #a5b4fc; }
+  .label { font-size: 11px; color: #94a3b8; margin-top: 12px; text-align: center; }
+</style>
+</head>
+<body>
+
+<h2>Icon Variants</h2>
+<div class="grid">
+
+  <!-- ICON ONLY - Light -->
+  <div>
+    <div class="card">
+      <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="56" height="56" rx="14" fill="#4f46e5"/>
+        <!-- Document shape -->
+        <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" fill="white" fill-opacity="0.15"/>
+        <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+        <!-- Folded corner -->
+        <path d="M32 12v8h8" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Checkmark -->
+        <path d="M21 31l4 4 9-9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="label">Icon — Indigo</div>
+  </div>
+
+  <!-- ICON ONLY - Dark bg -->
+  <div>
+    <div class="card dark">
+      <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="56" height="56" rx="14" fill="#4f46e5"/>
+        <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" fill="white" fill-opacity="0.15"/>
+        <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M32 12v8h8" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M21 31l4 4 9-9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="label">Icon — Dark bg</div>
+  </div>
+
+  <!-- ICON - Outline only -->
+  <div>
+    <div class="card">
+      <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" fill="#eef2ff"/>
+        <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" stroke="#4f46e5" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M32 12v8h8" stroke="#4f46e5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M21 31l4 4 9-9" stroke="#4f46e5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="label">Icon — Outline</div>
+  </div>
+
+</div>
+
+<h2>Full Wordmark — Light Background</h2>
+<div class="grid">
+
+  <!-- WORDMARK - Large -->
+  <div>
+    <div class="card" style="width: 320px;">
+      <div class="wordmark">
+        <svg width="40" height="40" viewBox="0 0 56 56" fill="none">
+          <rect width="56" height="56" rx="14" fill="#4f46e5"/>
+          <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" fill="white" fill-opacity="0.15"/>
+          <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M32 12v8h8" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M21 31l4 4 9-9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span style="font-size:24px;font-weight:800;letter-spacing:-0.5px;">
+          <span style="color:#1e293b">compli</span><span style="color:#4f46e5">file</span>
+        </span>
+      </div>
+    </div>
+    <div class="label">Wordmark — Large</div>
+  </div>
+
+  <!-- WORDMARK - With tagline -->
+  <div>
+    <div class="card" style="width: 320px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <svg width="40" height="40" viewBox="0 0 56 56" fill="none">
+          <rect width="56" height="56" rx="14" fill="#4f46e5"/>
+          <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" fill="white" fill-opacity="0.15"/>
+          <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M32 12v8h8" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M21 31l4 4 9-9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px;line-height:1;">
+            <span style="color:#1e293b">compli</span><span style="color:#4f46e5">file</span>
+          </div>
+          <div style="font-size:10px;color:#94a3b8;letter-spacing:0.05em;margin-top:2px;">GST · ROC · PF-ESI</div>
+        </div>
+      </div>
+    </div>
+    <div class="label">Wordmark — With Tagline</div>
+  </div>
+
+  <!-- WORDMARK - Small (navbar size) -->
+  <div>
+    <div class="card" style="width: 240px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <svg width="30" height="30" viewBox="0 0 56 56" fill="none">
+          <rect width="56" height="56" rx="14" fill="#4f46e5"/>
+          <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" fill="white" fill-opacity="0.15"/>
+          <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M32 12v8h8" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M21 31l4 4 9-9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span style="font-size:17px;font-weight:800;letter-spacing:-0.3px;">
+          <span style="color:#1e293b">compli</span><span style="color:#4f46e5">file</span>
+        </span>
+      </div>
+    </div>
+    <div class="label">Wordmark — Navbar Size</div>
+  </div>
+
+</div>
+
+<h2>Full Wordmark — Dark Background</h2>
+<div class="grid">
+
+  <div>
+    <div class="card dark" style="width: 320px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <svg width="40" height="40" viewBox="0 0 56 56" fill="none">
+          <rect width="56" height="56" rx="14" fill="#4f46e5"/>
+          <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" fill="white" fill-opacity="0.15"/>
+          <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M32 12v8h8" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M21 31l4 4 9-9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px;line-height:1;">
+            <span style="color:white">compli</span><span style="color:#a5b4fc">file</span>
+          </div>
+          <div style="font-size:10px;color:#64748b;letter-spacing:0.05em;margin-top:2px;">GST · ROC · PF-ESI</div>
+        </div>
+      </div>
+    </div>
+    <div class="label">Dark bg — Sidebar style</div>
+  </div>
+
+  <div>
+    <div class="card gradient" style="width: 280px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <svg width="40" height="40" viewBox="0 0 56 56" fill="none">
+          <rect width="56" height="56" rx="14" fill="white" fill-opacity="0.15"/>
+          <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" fill="white" fill-opacity="0.2"/>
+          <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M32 12v8h8" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M21 31l4 4 9-9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:white;">complifile</span>
+      </div>
+    </div>
+    <div class="label">Gradient bg</div>
+  </div>
+
+</div>
+
+<h2>Favicon / App Icon</h2>
+<div class="grid" style="align-items:flex-end;">
+
+  <div>
+    <div class="card">
+      <svg width="64" height="64" viewBox="0 0 56 56" fill="none">
+        <rect width="56" height="56" rx="14" fill="#4f46e5"/>
+        <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" fill="white" fill-opacity="0.15"/>
+        <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M32 12v8h8" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M21 31l4 4 9-9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="label">64px</div>
+  </div>
+
+  <div>
+    <div class="card">
+      <svg width="48" height="48" viewBox="0 0 56 56" fill="none">
+        <rect width="56" height="56" rx="14" fill="#4f46e5"/>
+        <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" fill="white" fill-opacity="0.15"/>
+        <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M32 12v8h8" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M21 31l4 4 9-9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="label">48px</div>
+  </div>
+
+  <div>
+    <div class="card">
+      <svg width="32" height="32" viewBox="0 0 56 56" fill="none">
+        <rect width="56" height="56" rx="12" fill="#4f46e5"/>
+        <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" fill="white" fill-opacity="0.15"/>
+        <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M32 12v8h8" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M21 31l4 4 9-9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="label">32px</div>
+  </div>
+
+  <div>
+    <div class="card">
+      <svg width="20" height="20" viewBox="0 0 56 56" fill="none">
+        <rect width="56" height="56" rx="10" fill="#4f46e5"/>
+        <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" fill="white" fill-opacity="0.2"/>
+        <path d="M16 12h16l8 8v24a2 2 0 01-2 2H16a2 2 0 01-2-2V14a2 2 0 012-2z" stroke="white" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M32 12v8h8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M21 31l4 4 9-9" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="label">20px (favicon)</div>
+  </div>
+
+</div>
+
+<h2>Color Palette</h2>
+<div class="grid">
+  <div style="display:flex;gap:12px;align-items:center;background:white;border-radius:16px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+    <div style="width:48px;height:48px;border-radius:10px;background:#4f46e5;"></div>
+    <div><div style="font-weight:700;font-size:13px;color:#1e293b;">Primary Indigo</div><div style="font-size:12px;color:#94a3b8;">#4F46E5</div></div>
+    <div style="width:48px;height:48px;border-radius:10px;background:#a5b4fc;margin-left:8px;"></div>
+    <div><div style="font-weight:700;font-size:13px;color:#1e293b;">Light Indigo</div><div style="font-size:12px;color:#94a3b8;">#A5B4FC</div></div>
+    <div style="width:48px;height:48px;border-radius:10px;background:#1e293b;margin-left:8px;"></div>
+    <div><div style="font-weight:700;font-size:13px;color:#1e293b;">Slate Dark</div><div style="font-size:12px;color:#94a3b8;">#1E293B</div></div>
+    <div style="width:48px;height:48px;border-radius:10px;background:#f1f5f9;border:1px solid #e2e8f0;margin-left:8px;"></div>
+    <div><div style="font-weight:700;font-size:13px;color:#1e293b;">Background</div><div style="font-size:12px;color:#94a3b8;">#F1F5F9</div></div>
+  </div>
+</div>
+
+</body>
+</html>

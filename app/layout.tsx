@@ -6,6 +6,10 @@ import { AuthProvider } from '@/contexts/AuthContext';
 export const metadata: Metadata = {
   title: 'Complifile — GST & ROC for Indian MSMEs',
   description: 'India\'s most trusted compliance management platform for chartered accountants and business owners.',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
