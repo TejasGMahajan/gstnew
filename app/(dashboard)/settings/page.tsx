@@ -27,7 +27,7 @@ export default function SettingsPage() {
   const [business, setBusiness] = useState<any>(null);
   const [gstin, setGstin] = useState('');
   const [businessName, setBusinessName] = useState('');
-  const [entityType, setEntityType] = useState('');
+  const [businessType, setBusinessType] = useState('');
   const [applicableTypes, setApplicableTypes] = useState<string[]>([]);
   const [bizSaving, setBizSaving] = useState(false);
   const [bizSuccess, setBizSuccess] = useState(false);
@@ -44,14 +44,14 @@ export default function SettingsPage() {
     if (!user) return;
     const { data } = await supabase
       .from('businesses')
-      .select('id, business_name, gstin, entity_type, applicable_compliance_types')
+      .select('id, business_name, gstin, business_type, applicable_compliance_types')
       .eq('owner_id', user.id)
       .maybeSingle();
     if (data) {
       setBusiness(data);
       setBusinessName(data.business_name || '');
       setGstin(data.gstin || '');
-      setEntityType(data.entity_type || '');
+      setBusinessType(data.business_type || '');
       setApplicableTypes(data.applicable_compliance_types || COMPLIANCE_TYPES.map(c => c.key));
     }
   }, [user]);
@@ -96,7 +96,7 @@ export default function SettingsPage() {
         .update({
           business_name: sanitizeText(businessName),
           gstin: sanitizeText(gstin).toUpperCase(),
-          entity_type: entityType,
+          business_type: businessType,
           applicable_compliance_types: applicableTypes,
         })
         .eq('id', business.id);
@@ -265,10 +265,10 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Entity Type</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Business Type</label>
                 <select
-                  value={entityType}
-                  onChange={e => setEntityType(e.target.value)}
+                  value={businessType}
+                  onChange={e => setBusinessType(e.target.value)}
                   className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">Select entity type…</option>
