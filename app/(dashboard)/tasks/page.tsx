@@ -77,6 +77,7 @@ export default function TasksPage() {
   const [selectedMonth, setSelectedMonth] = useState(0); // 0 = all months
   const [page, setPage] = useState(1);
   const [markingId, setMarkingId] = useState<string | null>(null);
+  const [markError, setMarkError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -120,12 +121,13 @@ export default function TasksPage() {
   const handleMarkComplete = async (taskId: string) => {
     if (!business || markingId) return;
     setMarkingId(taskId);
+    setMarkError(null);
     try {
       await transitionTaskStatus(taskId, 'acknowledged');
       setAllTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'acknowledged' as const } : t));
       await logUserAction('completed', 'task', taskId, 'Task marked complete by owner', business.id);
-    } catch {
-      // task may already be in terminal state — ignore
+    } catch (err: unknown) {
+      setMarkError(err instanceof Error ? err.message : 'Could not update task — it may need to be in a later stage first');
     } finally {
       setMarkingId(null);
     }
@@ -283,6 +285,12 @@ export default function TasksPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {markError && (
+          <div className="mx-5 mb-2 px-3 py-2 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700">
+            {markError}
           </div>
         )}
 

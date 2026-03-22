@@ -41,15 +41,32 @@ export async function GET(request: Request) {
     const pageSize = Math.min(parseInt(url.searchParams.get('page_size') || '20'), 100);
     const offset = (page - 1) * pageSize;
 
+    // Ownership check — restrict to businesses owned by this user
+    const { data: ownedBusinesses } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('owner_id', user.id);
+    const ownedIds = (ownedBusinesses ?? []).map((b: { id: string }) => b.id);
+
+    if (businessId && !ownedIds.includes(businessId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     let query = supabase
       .from('documents')
-      .select('id, file_name, file_type, file_size, category, storage_path, version_number, created_at', { count: 'exact' })
+      .select('id, file_name, file_type, file_size, category, storage_path, uploaded_at', { count: 'exact' })
       .is('deleted_at', null)
-      .order('created_at', { ascending: false })
+      .order('uploaded_at', { ascending: false })
       .range(offset, offset + pageSize - 1);
 
     if (category) query = query.eq('category', category);
-    if (businessId) query = query.eq('business_id', businessId);
+    if (businessId) {
+      query = query.eq('business_id', businessId);
+    } else if (ownedIds.length > 0) {
+      query = query.in('business_id', ownedIds);
+    } else {
+      return NextResponse.json({ data: [], pagination: { page, page_size: pageSize, total: 0, total_pages: 0 } });
+    }
 
     const { data: documents, count, error } = await query;
 
