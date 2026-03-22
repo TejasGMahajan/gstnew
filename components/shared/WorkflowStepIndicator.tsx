@@ -10,20 +10,19 @@ const STEPS = [
   { key: 'created', label: 'Created', index: 0 },
   { key: 'awaiting_documents', label: 'Awaiting Docs', index: 1 },
   { key: 'under_review', label: 'Under Review', index: 2 },
-  { key: 'filed', label: 'Filed', index: 3 },
-  { key: 'acknowledged', label: 'Acknowledged', index: 4 },
+  { key: 'ready_to_file', label: 'Ready to File', index: 3 },
+  { key: 'filed', label: 'Filed', index: 4 },
+  { key: 'acknowledged', label: 'Acknowledged', index: 5 },
 ];
 
 const STATUS_TO_STEP: Record<string, number> = {
   created: 0,
   awaiting_documents: 1,
   under_review: 2,
-  filed: 3,
-  acknowledged: 4,
-  locked: 4,
-  completed: 4,
-  pending: 0,
-  overdue: 0,
+  ready_to_file: 3,
+  filed: 4,
+  acknowledged: 5,
+  locked: 5,
 };
 
 // ─── Exports ──────────────────────────────────────────────────────────────────
@@ -31,9 +30,6 @@ const STATUS_TO_STEP: Record<string, number> = {
 export function getStatusLabel(status: string): string {
   const step = STEPS.find(s => s.key === status);
   if (step) return step.label;
-  if (status === 'pending') return 'Pending';
-  if (status === 'overdue') return 'Overdue';
-  if (status === 'completed') return 'Completed';
   if (status === 'locked') return 'Locked';
   return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
@@ -41,18 +37,18 @@ export function getStatusLabel(status: string): string {
 export function getNextAllowedStatus(status: string): string | null {
   switch (status) {
     case 'created':
-    case 'pending':
       return 'awaiting_documents';
     case 'awaiting_documents':
       return 'under_review';
     case 'under_review':
+      return 'ready_to_file';
+    case 'ready_to_file':
       return 'filed';
     case 'filed':
       return 'acknowledged';
     case 'acknowledged':
       return 'locked';
     case 'locked':
-    case 'completed':
       return null;
     default:
       return null;

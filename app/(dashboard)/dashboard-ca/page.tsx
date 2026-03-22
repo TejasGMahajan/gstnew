@@ -100,6 +100,10 @@ function planBadgeClass(plan: string) {
 }
 
 const DONE_STATUSES_CA = new Set(['filed', 'acknowledged', 'locked']);
+const ACTIVE_STATUSES_CA = new Set(['created', 'awaiting_documents', 'under_review', 'ready_to_file']);
+const isCATaskDone = (t: any) => DONE_STATUSES_CA.has(t.status);
+const isCATaskOverdue = (t: any) => ACTIVE_STATUSES_CA.has(t.status) && daysUntil(t.due_date) < 0;
+
 function clientScore(tasks: any[]) {
   if (!tasks || tasks.length === 0) return 100;
   const done = tasks.filter(t => DONE_STATUSES_CA.has(t.status)).length;
@@ -346,18 +350,18 @@ export default function DashboardCAPage() {
   );
   const tasksDueThisWeek = allClientTasks.filter(t => {
     const diff = daysUntil(t.due_date);
-    return diff >= 0 && diff <= 7 && t.status !== 'completed';
+    return diff >= 0 && diff <= 7 && !isCATaskDone(t);
   }).length;
   const awaitingDocs = allClientTasks.filter(t => t.status === 'awaiting_documents').length;
   const completedThisMonth = allClientTasks.filter(t => {
-    if (t.status !== 'completed') return false;
+    if (!isCATaskDone(t)) return false;
     const d = new Date((t as any).completed_at || t.due_date);
     const now = new Date();
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
 
   const urgentTasks = allClientTasks
-    .filter(t => (t.status === 'overdue' || daysUntil(t.due_date) <= 3) && t.status !== 'completed')
+    .filter(t => (isCATaskOverdue(t) || daysUntil(t.due_date) <= 3) && !isCATaskDone(t))
     .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
     .slice(0, 8);
 
@@ -620,7 +624,7 @@ export default function DashboardCAPage() {
                 <div className="divide-y divide-slate-50">
                   {atRiskClients.slice(0, 6).map(c => {
                     const score = clientScore(c.compliance_tasks || []);
-                    const pending = (c.compliance_tasks || []).filter((t: any) => t.status !== 'completed').length;
+                    const pending = (c.compliance_tasks || []).filter((t: any) => !isCATaskDone(t)).length;
                     return (
                       <div key={c.id} className="flex items-center gap-3 px-5 py-3">
                         <div className="w-8 h-8 bg-rose-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -697,7 +701,7 @@ export default function DashboardCAPage() {
                   <div className="divide-y divide-slate-100">
                     {paginatedClients.map(c => {
                       const score = clientScore(c.compliance_tasks || []);
-                      const pending = (c.compliance_tasks || []).filter((t: any) => t.status !== 'completed').length;
+                      const pending = (c.compliance_tasks || []).filter((t: any) => !isCATaskDone(t)).length;
                       const plan = c.subscriptions?.[0]?.plan_type || 'free';
                       return (
                         <div key={c.id}
@@ -806,9 +810,9 @@ export default function DashboardCAPage() {
                 const day = i + 1;
                 const dayTasks = tasksByDay[day] || [];
                 const isSelected = selectedDay === day;
-                const hasOverdue = dayTasks.some(t => t.status === 'overdue');
-                const hasPending = dayTasks.some(t => daysUntil(t.due_date) <= 3 && t.status !== 'completed');
-                const hasCompleted = dayTasks.some(t => t.status === 'completed');
+                const hasOverdue = dayTasks.some(t => isCATaskOverdue(t));
+                const hasPending = dayTasks.some(t => daysUntil(t.due_date) <= 3 && !isCATaskDone(t));
+                const hasCompleted = dayTasks.some(t => isCATaskDone(t));
 
                 return (
                   <button
@@ -1136,7 +1140,7 @@ export default function DashboardCAPage() {
                   <div className="space-y-3">
                     {auditTasks.map(t => (
                       <div key={t.id} className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl">
-                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${t.status === 'completed' ? 'bg-emerald-500' : t.status === 'overdue' ? 'bg-rose-500' : 'bg-amber-500'}`} />
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isCATaskDone(t) ? 'bg-emerald-500' : isCATaskOverdue(t) ? 'bg-rose-500' : 'bg-amber-500'}`} />
                         <div className="flex-1">
                           <p className="text-sm font-medium text-slate-800">{t.task_name}</p>
                           <p className="text-xs text-slate-400">Due {new Date(t.due_date).toLocaleDateString('en-IN')}</p>
@@ -1404,8 +1408,8 @@ export default function DashboardCAPage() {
                 const rows = [['Business Name', 'Plan', 'Score', 'Pending Tasks', 'Overdue']];
                 activeClients.forEach(c => {
                   const score = clientScore(c.compliance_tasks || []);
-                  const pending = (c.compliance_tasks || []).filter((t: any) => t.status === 'pending').length;
-                  const overdue = (c.compliance_tasks || []).filter((t: any) => t.status === 'overdue').length;
+                  const pending = (c.compliance_tasks || []).filter((t: any) => !isCATaskDone(t)).length;
+                  const overdue = (c.compliance_tasks || []).filter((t: any) => isCATaskOverdue(t)).length;
                   rows.push([c.businesses?.business_name || '', c.subscriptions?.[0]?.plan_type || 'free', `${score}%`, String(pending), String(overdue)]);
                 });
                 const csv = rows.map(r => r.join(',')).join('\n');
@@ -1434,7 +1438,7 @@ export default function DashboardCAPage() {
                   const row = [c.businesses?.business_name || ''];
                   taskTypes.forEach(type => {
                     const task = (c.compliance_tasks || []).find((t: any) => t.task_type === type);
-                    row.push(task ? (task.status === 'completed' ? '✓' : task.status === 'overdue' ? '✗' : 'Pending') : 'N/A');
+                    row.push(task ? (isCATaskDone(task) ? '✓' : isCATaskOverdue(task) ? '✗' : 'Pending') : 'N/A');
                   });
                   rows.push(row);
                 });
@@ -1460,8 +1464,8 @@ export default function DashboardCAPage() {
                 const rows = [['Business Name', 'Score', 'Overdue Tasks', 'Pending Tasks', 'Recommended Action']];
                 atRiskClients.forEach(c => {
                   const score = clientScore(c.compliance_tasks || []);
-                  const overdue = (c.compliance_tasks || []).filter((t: any) => t.status === 'overdue').length;
-                  const pending = (c.compliance_tasks || []).filter((t: any) => t.status === 'pending').length;
+                  const overdue = (c.compliance_tasks || []).filter((t: any) => isCATaskOverdue(t)).length;
+                  const pending = (c.compliance_tasks || []).filter((t: any) => !isCATaskDone(t)).length;
                   const action = overdue > 0 ? 'Immediate filing required' : pending > 5 ? 'Schedule compliance review' : 'Follow up on pending tasks';
                   rows.push([c.businesses?.business_name || '', `${score}%`, String(overdue), String(pending), action]);
                 });
