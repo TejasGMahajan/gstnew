@@ -500,6 +500,24 @@ export default function DashboardCAPage() {
     ? `Hi! This is a reminder that your ${remindeModal.task_name} is due on ${new Date(remindeModal.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}. Please share the required documents at your earliest convenience.\n\nRegards,\n${profile?.full_name || 'Your CA'}`
     : '';
 
+  const handleExportPDF = async (businessId: string) => {
+    setReportLoading(businessId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { alert('Not authenticated.'); return; }
+      const res = await fetch(`/api/export/${businessId}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) { alert('Export failed. You may need to upgrade to Pro.'); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `audit_report_${businessId}.pdf`; a.click();
+      URL.revokeObjectURL(url);
+    } catch { alert('Export failed. Please try again.'); }
+    finally { setReportLoading(null); }
+  };
+
   // ─────────────────────────────────────────────────────────────────────────
   //  RENDER
   // ─────────────────────────────────────────────────────────────────────────
@@ -1127,14 +1145,14 @@ export default function DashboardCAPage() {
               <div className="card-base p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold text-slate-900">Compliance Timeline</h3>
-                  <a
-                    href={`/api/export/${auditClientId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+                  <button
+                    onClick={() => handleExportPDF(auditClientId)}
+                    disabled={reportLoading === auditClientId}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors disabled:opacity-60"
                   >
-                    <Download className="w-3.5 h-3.5" /> Export Audit PDF
-                  </a>
+                    <Download className="w-3.5 h-3.5" />
+                    {reportLoading === auditClientId ? 'Exporting...' : 'Export Audit PDF'}
+                  </button>
                 </div>
                 {loadingAudit ? <SkeletonTable rows={4} /> : (
                   <div className="space-y-3">
