@@ -1,4 +1,5 @@
 // FILE: lib/featureGate.tsx
+import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
 // ─── PLAN LIMITS ────────────────────────────────────────────────────────────
