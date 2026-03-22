@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,20 +11,9 @@ export async function POST(req: NextRequest) {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     const type = allowedTypes.includes(mediaType) ? mediaType : 'image/png';
 
-    const message = await client.messages.create({
-      model: 'claude-opus-4-6',
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: { type: 'base64', media_type: type as any, data: imageBase64 },
-            },
-            {
-              type: 'text',
-              text: `You are a compliance document OCR assistant for Indian businesses. Analyse this document and extract all key information.
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+    const prompt = `You are a compliance document OCR assistant for Indian businesses. Analyse this document and extract all key information.
 
 First identify the document type from this list:
 - GST Invoice / Tax Invoice / e-Invoice
@@ -56,15 +45,14 @@ Return a JSON object with:
   "warnings": ["<any issues like missing GSTIN, incorrect format, etc>"]
 }
 
-Only include fields that have actual values. Return ONLY the JSON, no explanation.`,
-            },
-          ],
-        },
-      ],
-    });
+Only include fields that have actual values. Return ONLY the JSON, no explanation.`;
 
-    const raw = (message.content[0] as any).text as string;
-    // Strip markdown code fences if present
+    const result = await model.generateContent([
+      { inlineData: { mimeType: type as any, data: imageBase64 } },
+      prompt,
+    ]);
+
+    const raw = result.response.text();
     const cleaned = raw.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
     const extracted = JSON.parse(cleaned);
     return NextResponse.json({ success: true, data: extracted });
