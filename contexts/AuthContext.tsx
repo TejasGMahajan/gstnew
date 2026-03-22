@@ -41,15 +41,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setLoading(true);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Non-async callback: do NOT await here — newer @supabase/auth-js runs callbacks
+      // inside the auth lock context, so any await holds the lock and blocks getSession().
       setUser(session?.user ?? null);
       if (session?.user) {
-        setProfile(await fetchProfile(session.user.id));
+        setLoading(true);
+        fetchProfile(session.user.id).then(p => {
+          setProfile(p);
+          setLoading(false);
+        });
       } else {
         setProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
