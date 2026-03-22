@@ -16,7 +16,7 @@ import {
   ChevronLeft, ChevronRight, RefreshCw, Plus, X, Copy, CheckCircle,
   MessageSquare, Download, Briefcase, ClipboardList, DollarSign,
   FileCheck, TrendingUp, Eye, Send, ChevronDown, LayoutGrid,
-  BookOpen, Activity
+  BookOpen, Activity, Trash2
 } from 'lucide-react';
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
@@ -472,6 +472,17 @@ export default function DashboardCAPage() {
     }
   };
 
+  const handleRemoveClient = async (clientId: string, businessName: string) => {
+    if (!confirm(`Remove "${businessName}" from your client list? They will lose access to CA services.`)) return;
+    await supabase
+      .from('client_relationships')
+      .delete()
+      .eq('id', clientId)
+      .eq('ca_profile_id', user!.id);
+    setClients(prev => prev.filter(c => c.id !== clientId));
+    if (selectedClient?.id === clientId) setSelectedClient(null);
+  };
+
   const inviteLink = typeof window !== 'undefined' ? `${window.location.origin}/signup?role=business_owner&ca=${user?.id}` : '';
 
   const copyInviteLink = () => {
@@ -764,6 +775,13 @@ export default function DashboardCAPage() {
                               className="px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
                             >
                               Tasks
+                            </button>
+                            <button
+                              onClick={e => { e.stopPropagation(); handleRemoveClient(c.id, c.businesses?.business_name || 'this client'); }}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                              title="Remove client"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
