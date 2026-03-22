@@ -249,10 +249,13 @@ export default function DashboardCAPage() {
   // Reports state
   const [reportLoading, setReportLoading] = useState<string | null>(null);
   // OCR
-  const [ocrFile, setOcrFile] = useState<File | null>(null);
+  const [ocrDocs, setOcrDocs] = useState<any[]>([]);
+  const [ocrDocsLoading, setOcrDocsLoading] = useState(false);
+  const [ocrSelectedDoc, setOcrSelectedDoc] = useState<any>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrResult, setOcrResult] = useState<any>(null);
   const [ocrError, setOcrError] = useState('');
+  const [ocrClientFilter, setOcrClientFilter] = useState('all');
 
   // ── Data Loading ───────────────────────────────────────────────────────────
 
@@ -347,6 +350,7 @@ export default function DashboardCAPage() {
     const url = new URL(window.location.href);
     url.searchParams.set('tab', tab);
     window.history.pushState({}, '', url.toString());
+    if (tab === 'ocr' && ocrDocs.length === 0) loadOcrDocs();
   };
 
   // ── Computed values ────────────────────────────────────────────────────────
@@ -489,53 +493,98 @@ export default function DashboardCAPage() {
     if (selectedClient?.id === clientId) setSelectedClient(null);
   };
 
-  const handleOcrScan = async () => {
-    if (!ocrFile) return;
+  const loadOcrDocs = async () => {
+    if (!user) return;
+    setOcrDocsLoading(true);
+    try {
+      // Get all active client business IDs
+      const { data: rels } = await supabase
+        .from('client_relationships')
+        .select('business_id, businesses(id, business_name)')
+        .eq('ca_profile_id', user.id)
+        .eq('status', 'active');
+      if (!rels || rels.length === 0) { setOcrDocs([]); return; }
+
+      const bizIds = rels.map((r: any) => r.business_id);
+      const bizMap = Object.fromEntries(rels.map((r: any) => [r.business_id, (r.businesses as any)?.business_name || 'Unknown']));
+
+      const { data: docs } = await supabase
+        .from('documents')
+        .select('id, file_name, file_type, file_size, category, uploaded_at, storage_path, business_id')
+        .in('business_id', bizIds)
+        .order('uploaded_at', { ascending: false });
+
+      setOcrDocs((docs || []).map((d: any) => ({ ...d, business_name: bizMap[d.business_id] || 'Unknown' })));
+    } finally {
+      setOcrDocsLoading(false);
+    }
+  };
+
+  const handleOcrScan = async (doc: any) => {
+    if (!doc?.storage_path) return;
+    setOcrSelectedDoc(doc);
     setOcrLoading(true);
     setOcrError('');
     setOcrResult(null);
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(ocrFile);
-      reader.onload = async () => {
-        const dataUrl = reader.result as string;
-        const [meta, base64] = dataUrl.split(',');
-        const mediaType = meta.match(/:(.*?);/)?.[1] || 'image/png';
-        const res = await fetch('/api/ocr', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64: base64, mediaType }),
-        });
-        const json = await res.json();
-        if (!res.ok) { setOcrError(json.error || 'OCR failed'); setOcrLoading(false); return; }
-        // Build editable fields list from result
-        const flat: { key: string; label: string; value: string; selected: boolean }[] = [];
-        const d = json.data;
-        if (d.documentType) flat.push({ key: 'documentType', label: 'Document Type', value: d.documentType, selected: true });
-        if (d.summary) flat.push({ key: 'summary', label: 'Summary', value: d.summary, selected: true });
-        (d.parties || []).forEach((p: any, i: number) => {
-          if (p.name) flat.push({ key: `party_${i}_name`, label: `${p.role || 'Party'} Name`, value: p.name, selected: true });
-          if (p.gstin) flat.push({ key: `party_${i}_gstin`, label: `${p.role || 'Party'} GSTIN`, value: p.gstin, selected: true });
-          if (p.pan) flat.push({ key: `party_${i}_pan`, label: `${p.role || 'Party'} PAN`, value: p.pan, selected: true });
-          if (p.address) flat.push({ key: `party_${i}_address`, label: `${p.role || 'Party'} Address`, value: p.address, selected: false });
-        });
-        (d.keyDates || []).forEach((kd: any) => {
-          if (kd.date) flat.push({ key: `date_${kd.label}`, label: kd.label, value: kd.date, selected: true });
-        });
-        (d.keyAmounts || []).forEach((ka: any) => {
-          if (ka.amount) flat.push({ key: `amt_${ka.label}`, label: ka.label, value: ka.amount, selected: true });
-        });
-        (d.identifiers || []).forEach((id: any) => {
-          if (id.value) flat.push({ key: `id_${id.label}`, label: id.label, value: id.value, selected: true });
-        });
-        Object.entries(d.fields || {}).forEach(([k, v]) => {
-          if (v) flat.push({ key: `field_${k}`, label: k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), value: String(v), selected: false });
-        });
-        setOcrResult({ raw: d, fields: flat, lineItems: d.lineItems || [], complianceNotes: d.complianceNotes || [], warnings: d.warnings || [], reportTitle: d.documentType || 'Document', clientNote: '' });
-        setOcrLoading(false);
-      };
+      // Get signed URL for the file
+      const { data: signed } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(doc.storage_path, 60);
+      if (!signed?.signedUrl) throw new Error('Could not access document. Check storage permissions.');
+
+      // Fetch the file as a blob and convert to base64
+      const response = await fetch(signed.signedUrl);
+      if (!response.ok) throw new Error('Failed to download document from storage.');
+      const blob = await response.blob();
+      const mediaType = blob.type || 'image/png';
+
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(',')[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      const res = await fetch('/api/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64, mediaType }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'OCR failed');
+
+      // Build editable fields list
+      const flat: { key: string; label: string; value: string; selected: boolean }[] = [];
+      const d = json.data;
+      if (d.documentType) flat.push({ key: 'documentType', label: 'Document Type', value: d.documentType, selected: true });
+      if (d.summary) flat.push({ key: 'summary', label: 'Summary', value: d.summary, selected: true });
+      (d.parties || []).forEach((p: any, i: number) => {
+        if (p.name) flat.push({ key: `party_${i}_name`, label: `${p.role || 'Party'} Name`, value: p.name, selected: true });
+        if (p.gstin) flat.push({ key: `party_${i}_gstin`, label: `${p.role || 'Party'} GSTIN`, value: p.gstin, selected: true });
+        if (p.pan) flat.push({ key: `party_${i}_pan`, label: `${p.role || 'Party'} PAN`, value: p.pan, selected: true });
+        if (p.address) flat.push({ key: `party_${i}_address`, label: `${p.role || 'Party'} Address`, value: p.address, selected: false });
+      });
+      (d.keyDates || []).forEach((kd: any) => {
+        if (kd.date) flat.push({ key: `date_${kd.label}`, label: kd.label, value: kd.date, selected: true });
+      });
+      (d.keyAmounts || []).forEach((ka: any) => {
+        if (ka.amount) flat.push({ key: `amt_${ka.label}`, label: ka.label, value: ka.amount, selected: true });
+      });
+      (d.identifiers || []).forEach((id: any) => {
+        if (id.value) flat.push({ key: `id_${id.label}`, label: id.label, value: id.value, selected: true });
+      });
+      Object.entries(d.fields || {}).forEach(([k, v]) => {
+        if (v) flat.push({ key: `field_${k}`, label: k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), value: String(v), selected: false });
+      });
+      setOcrResult({ raw: d, fields: flat, lineItems: d.lineItems || [], complianceNotes: d.complianceNotes || [], warnings: d.warnings || [], reportTitle: `${doc.file_name} — ${d.documentType || 'Scan'}`, clientNote: '', businessName: doc.business_name });
     } catch (e: any) {
-      setOcrError(e.message); setOcrLoading(false);
+      setOcrError(e.message);
+    } finally {
+      setOcrLoading(false);
     }
   };
 
@@ -1646,53 +1695,79 @@ ${ocrResult.warnings.length > 0 ? `<h2>Warnings</h2><div class="warn-box">${ocrR
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
           <div className="card-base p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
-                <ScanLine className="w-5 h-5 text-indigo-600" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+                  <ScanLine className="w-5 h-5 text-indigo-600" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">Document Scanner</h2>
+                  <p className="text-xs text-slate-500">Scan documents uploaded by your clients — extract data for accounting, auditing & filing reports.</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-base font-bold text-slate-900">Document Scanner</h2>
-                <p className="text-xs text-slate-500">Upload any compliance document — GST Invoice, TDS Certificate, ITR, PF, ROC, etc. AI extracts all fields.</p>
-              </div>
+              <button onClick={loadOcrDocs} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                <RefreshCw className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
-          {/* Upload zone */}
-          <div className="card-base p-6">
-            <label className="block text-sm font-semibold text-slate-700 mb-3">Upload Document</label>
-            <label
-              className={`flex flex-col items-center justify-center gap-3 p-8 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${ocrFile ? 'border-indigo-400 bg-indigo-50' : 'border-slate-300 hover:border-indigo-400 hover:bg-slate-50'}`}
-            >
-              <FileSearch className="w-10 h-10 text-slate-400" />
-              {ocrFile ? (
-                <div className="text-center">
-                  <p className="text-sm font-semibold text-indigo-700">{ocrFile.name}</p>
-                  <p className="text-xs text-slate-500">{(ocrFile.size / 1024).toFixed(1)} KB — click to change</p>
-                </div>
-              ) : (
-                <div className="text-center">
-                  <p className="text-sm font-medium text-slate-600">Drop file here or click to browse</p>
-                  <p className="text-xs text-slate-400 mt-1">PDF, PNG, JPG, JPEG • Max 10 MB</p>
-                </div>
-              )}
-              <input type="file" className="hidden" accept=".pdf,.png,.jpg,.jpeg"
-                onChange={e => { setOcrFile(e.target.files?.[0] || null); setOcrResult(null); setOcrError(''); }} />
-            </label>
-            {ocrError && (
-              <div className="flex items-center gap-2 mt-3 p-3 bg-rose-50 border border-rose-200 rounded-lg">
-                <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
-                <p className="text-sm text-rose-700">{ocrError}</p>
+          {/* Client documents list */}
+          <div className="card-base overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-semibold text-slate-900 text-sm">Client Documents</h3>
+              <select value={ocrClientFilter} onChange={e => setOcrClientFilter(e.target.value)}
+                className="text-xs px-2 py-1 border border-slate-200 rounded-lg bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                <option value="all">All clients</option>
+                {[...new Set(ocrDocs.map(d => d.business_name))].map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            </div>
+            {ocrDocsLoading ? (
+              <div className="py-10 text-center text-sm text-slate-400">Loading documents…</div>
+            ) : ocrDocs.length === 0 ? (
+              <div className="py-12 text-center">
+                <FileSearch className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+                <p className="text-sm font-semibold text-slate-600">No documents yet</p>
+                <p className="text-xs text-slate-400 mt-1">Documents uploaded by your clients will appear here.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-50">
+                {ocrDocs
+                  .filter(d => ocrClientFilter === 'all' || d.business_name === ocrClientFilter)
+                  .map(doc => (
+                    <div key={doc.id} className={`flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors ${ocrSelectedDoc?.id === doc.id ? 'bg-indigo-50' : ''}`}>
+                      <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <FileText className="w-4 h-4 text-slate-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-800 truncate">{doc.file_name}</p>
+                        <p className="text-xs text-slate-400">
+                          <span className="text-indigo-600 font-medium">{doc.business_name}</span>
+                          {' · '}{doc.category}{' · '}{new Date(doc.uploaded_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {doc.file_size ? ` · ${(doc.file_size / 1024).toFixed(0)} KB` : ''}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleOcrScan(doc)}
+                        disabled={ocrLoading && ocrSelectedDoc?.id === doc.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60 flex-shrink-0"
+                      >
+                        <ScanLine className="w-3.5 h-3.5" />
+                        {ocrLoading && ocrSelectedDoc?.id === doc.id ? 'Scanning…' : 'Scan'}
+                      </button>
+                    </div>
+                  ))}
               </div>
             )}
-            <button
-              onClick={handleOcrScan}
-              disabled={!ocrFile || ocrLoading}
-              className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white font-semibold text-sm rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
-            >
-              <ScanLine className="w-4 h-4" />
-              {ocrLoading ? 'Scanning…' : 'Scan & Extract Data'}
-            </button>
           </div>
+
+          {ocrError && (
+            <div className="flex items-center gap-2 p-4 bg-rose-50 border border-rose-200 rounded-xl">
+              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+              <p className="text-sm text-rose-700">{ocrError}</p>
+            </div>
+          )}
 
           {/* Results */}
           {ocrResult && (
