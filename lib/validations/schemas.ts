@@ -9,6 +9,6 @@ export const documentUploadSchema = z.object({
 export const taskSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
-  status: z.enum(['pending', 'in_progress', 'completed', 'overdue']),
+  status: z.enum(['created', 'awaiting_documents', 'under_review', 'ready_to_file', 'filed', 'acknowledged', 'locked']),
   dueDate: z.string().datetime(),
 });
