@@ -69,12 +69,10 @@ export interface Document {
   id: string;
   business_id: string;
   file_name: string;
-  file_url?: string;        // legacy — use storage_path for new uploads
-  storage_path?: string;    // canonical path for signed URL generation
+  storage_path: string;
   file_type: string;
   file_size?: number;
   category?: string;
-  version_number?: number;
   uploaded_by: string;
   uploaded_at: string;
   description?: string;

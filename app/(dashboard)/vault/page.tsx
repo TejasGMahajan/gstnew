@@ -95,6 +95,7 @@ export default function VaultPage() {
           .from('documents')
           .select('*')
           .eq('business_id', biz.id)
+          .is('deleted_at', null)
           .order('uploaded_at', { ascending: false }),
 
         supabase
