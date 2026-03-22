@@ -63,8 +63,12 @@ export async function POST(request: NextRequest) {
         }
       );
 
+      if (!orderResponse.ok) {
+        console.error('[razorpay/webhook] order fetch failed:', orderResponse.status);
+        return NextResponse.json({ error: 'Failed to fetch order from Razorpay' }, { status: 502 });
+      }
       const orderData = await orderResponse.json();
-      const { business_id, plan_type, billing_cycle } = orderData.notes;
+      const { business_id, plan_type, billing_cycle } = orderData.notes ?? {};
 
       if (!business_id || !plan_type) {
         console.error('Missing business_id or plan_type in order notes');
